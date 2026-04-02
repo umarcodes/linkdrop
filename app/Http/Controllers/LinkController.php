@@ -42,7 +42,9 @@ class LinkController extends Controller
 
     public function update(Request $request, Link $link): JsonResponse
     {
-        $this->authorize('update', $link);
+        if ($request->user()->id !== $link->user_id) {
+            abort(403);
+        }
 
         if ($request->has('url')) {
             $request->merge(['url' => $this->normalizeUrl($request->input('url', ''))]);
@@ -62,7 +64,9 @@ class LinkController extends Controller
 
     public function destroy(Request $request, Link $link): JsonResponse
     {
-        $this->authorize('delete', $link);
+        if ($request->user()->id !== $link->user_id) {
+            abort(403);
+        }
 
         $link->delete();
 
