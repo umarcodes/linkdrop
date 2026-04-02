@@ -39,8 +39,17 @@ jobs:
       - name: Copy .env
         run: cp .env.example .env
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install Node dependencies and build assets
+        run: npm ci && npm run build
 
       - name: Generate app key
         run: php artisan key:generate
