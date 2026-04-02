@@ -35,7 +35,7 @@ class LinkTest extends TestCase
 
         $this->withToken($token)->postJson('/api/links', [
             'title' => 'Bad Link',
-            'url'   => 'not-a-url',
+            'url'   => 'ftp://example.com',
         ])->assertUnprocessable()->assertJsonValidationErrors(['url']);
     }
 
