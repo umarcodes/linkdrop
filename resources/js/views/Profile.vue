@@ -1,0 +1,212 @@
+<template>
+  <div class="profile-bg">
+    <div class="orb orb-1" />
+    <div class="orb orb-2" />
+
+    <div v-if="loading" class="loading-wrap">
+      <div class="spinner-lg" />
+    </div>
+
+    <div v-else-if="notFound" class="not-found">
+      <div class="not-found-code">404</div>
+      <div class="not-found-msg">Profile not found</div>
+      <p class="not-found-sub">This username doesn't exist or may have been removed.</p>
+      <a href="/" class="not-found-home">← Go to LinkDrop</a>
+    </div>
+
+    <div v-else-if="profile" class="profile-card">
+      <div class="avatar-wrap">
+        <div class="avatar">{{ initial }}</div>
+      </div>
+
+      <h1 class="profile-name">{{ profile.name }}</h1>
+      <p class="profile-handle">@{{ profile.username }}</p>
+      <p v-if="profile.bio" class="profile-bio">{{ profile.bio }}</p>
+
+      <div class="links-list">
+        <a
+          v-for="link in profile.links"
+          :key="link.id"
+          :href="link.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="link-item"
+          @click.prevent="handleLinkClick(link)"
+        >
+          <span class="link-icon">{{ link.icon || '🔗' }}</span>
+          <span class="link-title">{{ link.title }}</span>
+          <span class="link-arrow">→</span>
+        </a>
+      </div>
+
+      <div class="made-with">
+        Made with <span class="brand">LinkDrop</span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useApi } from '../composables/useApi'
+
+const route = useRoute()
+const { get, post } = useApi()
+
+const profile  = ref(null)
+const loading  = ref(true)
+const notFound = ref(false)
+
+const initial = computed(() => profile.value?.name?.[0]?.toUpperCase() || '?')
+
+async function fetchProfile() {
+  loading.value = true
+  try {
+    profile.value = await get(`/p/${route.params.username}`)
+  } catch {
+    notFound.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleLinkClick(link) {
+  window.open(link.url, '_blank', 'noopener,noreferrer')
+  try {
+    await post(`/p/${route.params.username}/click/${link.id}`)
+  } catch {}
+}
+
+onMounted(fetchProfile)
+</script>
+
+<style scoped>
+.profile-bg {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 40px 16px;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.orb-1 { width: 500px; height: 500px; background: #7c6af7; top: -150px; left: -150px; }
+.orb-2 { width: 400px; height: 400px; background: #e96af5; bottom: -100px; right: -100px; }
+
+.loading-wrap {
+  display: flex; align-items: center; justify-content: center;
+  height: 200px;
+}
+
+.spinner-lg {
+  width: 40px; height: 40px;
+  border: 3px solid #1e1e2e;
+  border-top-color: #7c6af7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.not-found {
+  text-align: center; z-index: 1;
+}
+
+.not-found-code {
+  font-size: 5rem; font-weight: 700;
+  background: linear-gradient(135deg, #7c6af7, #e96af5);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.not-found-msg { color: #666; font-size: 1.1rem; margin-top: 8px; }
+.not-found-sub { color: #444; font-size: 0.875rem; margin-top: 8px; }
+.not-found-home {
+  display: inline-block;
+  margin-top: 20px;
+  color: #7c6af7;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: 1px solid rgba(124,106,247,0.3);
+  padding: 8px 18px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+.not-found-home:hover { background: rgba(124,106,247,0.1); }
+
+.profile-card {
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.avatar-wrap {
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.avatar-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c6af7, #e96af5);
+  filter: blur(12px);
+  opacity: 0.6;
+}
+
+.avatar {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c6af7, #e96af5);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700;
+  position: relative;
+}
+
+.profile-name { font-size: 1.5rem; font-weight: 700; color: #e8e8f0; margin-bottom: 4px; }
+.profile-handle { color: #666; font-size: 0.9rem; margin-bottom: 12px; }
+.profile-bio { color: #a0a0b0; font-size: 0.9rem; text-align: center; max-width: 320px; margin-bottom: 24px; line-height: 1.5; }
+
+.links-list { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+
+.link-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #111118;
+  border: 1px solid #1e1e2e;
+  border-radius: 14px;
+  padding: 16px 18px;
+  text-decoration: none;
+  color: #e8e8f0;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+.link-item:hover {
+  border-color: #7c6af7;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(124,106,247,0.15);
+}
+
+.link-icon { font-size: 1.3rem; flex-shrink: 0; }
+.link-title { flex: 1; font-weight: 500; font-size: 0.95rem; }
+.link-arrow { color: #666; font-size: 1rem; transition: transform 0.15s; }
+.link-item:hover .link-arrow { transform: translateX(4px); color: #7c6af7; }
+
+.made-with { font-size: 0.78rem; color: #444; }
+.brand { color: #7c6af7; font-weight: 600; }
+</style>
