@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -62,5 +63,25 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return response()->json($request->user());
+    }
+
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => ['required', 'image', 'max:2048', 'mimes:jpeg,png,gif,webp'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user->avatar) {
+            $oldPath = str_replace('/storage/', '', parse_url($user->avatar, PHP_URL_PATH));
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $path = $request->file('avatar')->store("avatars/{$user->id}", 'public');
+
+        $user->update(['avatar' => Storage::disk('public')->url($path)]);
+
+        return response()->json(['avatar' => $user->avatar]);
     }
 }

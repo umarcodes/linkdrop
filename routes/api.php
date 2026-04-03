@@ -19,6 +19,7 @@ Route::post('/p/{username}/click/{linkId}', [ProfileController::class, 'trackCli
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/profile/avatar', [AuthController::class, 'uploadAvatar']);
 
     Route::apiResource('links', LinkController::class);
     Route::post('/links/reorder', [LinkController::class, 'reorder']);

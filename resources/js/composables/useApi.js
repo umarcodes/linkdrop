@@ -13,6 +13,13 @@ function buildHeaders() {
   return headers
 }
 
+function buildUploadHeaders() {
+  const headers = { Accept: 'application/json' }
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
 export function useApi() {
   const loading = ref(false)
   const error = ref(null)
@@ -40,13 +47,37 @@ export function useApi() {
     }
   }
 
+  async function upload(path, formData) {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        method: 'POST',
+        headers: buildUploadHeaders(),
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        error.value = data.message || data.errors || 'An error occurred'
+        throw error.value
+      }
+      return data
+    } catch (e) {
+      if (!error.value) error.value = e?.message || 'Network error'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
-    get:   (path)         => request('GET', path),
-    post:  (path, body)   => request('POST', path, body),
-    put:   (path, body)   => request('PUT', path, body),
-    patch: (path, body)   => request('PATCH', path, body),
-    del:   (path)         => request('DELETE', path),
+    get:    (path)         => request('GET', path),
+    post:   (path, body)   => request('POST', path, body),
+    put:    (path, body)   => request('PUT', path, body),
+    patch:  (path, body)   => request('PATCH', path, body),
+    del:    (path)         => request('DELETE', path),
+    upload: (path, fd)     => upload(path, fd),
   }
 }
