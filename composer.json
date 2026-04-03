@@ -30,5 +30,13 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": [
+                "laravel/pail",
+                "laravel/tinker"
+            ]
+        }
     }
 }
