@@ -20,7 +20,8 @@ jobs:
           script: |
             set -e
             cd /var/www/umar.app/projects/linkdrop
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
             composer install --no-dev --optimize-autoloader --no-interaction --no-progress
             npm ci
