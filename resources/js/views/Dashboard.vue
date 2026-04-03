@@ -22,7 +22,12 @@
       </nav>
 
       <div class="sidebar-user">
-        <div class="user-avatar">{{ userInitial }}</div>
+        <button class="user-avatar-btn" title="Change avatar" aria-label="Change avatar" @click="$refs.avatarInput.click()">
+          <img v-if="user?.avatar" :src="user.avatar" class="user-avatar-img" alt="Your avatar" />
+          <div v-else class="user-avatar">{{ userInitial }}</div>
+          <div class="avatar-overlay">📷</div>
+        </button>
+        <input ref="avatarInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden-input" @change="handleAvatarUpload" />
         <div class="user-info">
           <div class="user-name">{{ user?.name }}</div>
           <div class="user-handle">@{{ user?.username }}</div>
@@ -187,7 +192,8 @@
       <a :href="`/${user?.username}`" target="_blank" class="phone-link" title="Open your public profile">
         <div class="phone">
           <div class="phone-screen">
-            <div class="preview-avatar">{{ userInitial }}</div>
+            <img v-if="user?.avatar" :src="user.avatar" class="preview-avatar preview-avatar-img" alt="" />
+            <div v-else class="preview-avatar">{{ userInitial }}</div>
             <div class="preview-name">{{ user?.name }}</div>
             <div class="preview-handle">@{{ user?.username }}</div>
             <div class="preview-links">
@@ -228,7 +234,7 @@ import { useApi } from '../composables/useApi'
 import { useToast } from '../composables/useToast'
 
 const router = useRouter()
-const { user, logout } = useAuth()
+const { user, logout, updateAvatar } = useAuth()
 const { post, put, del, loading: addLoading, error: addErr } = useApi()
 const { get: getLinks, loading: linksLoading } = useApi()
 const { get: getAnalytics, loading: analyticsLoading } = useApi()
@@ -331,6 +337,18 @@ async function deleteLink(id) {
   }
 }
 
+async function handleAvatarUpload(e) {
+  const file = e.target.files[0]
+  if (!file) { return }
+  try {
+    await updateAvatar(file)
+    toast.success('Avatar updated')
+  } catch {
+    toast.error('Failed to upload avatar')
+  }
+  e.target.value = ''
+}
+
 async function handleLogout() {
   confirmLogout.value = false
   await logout()
@@ -399,14 +417,46 @@ onMounted(() => {
   border-top: 1px solid #1e1e2e;
 }
 
+.user-avatar-btn {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.user-avatar-btn:hover .avatar-overlay { opacity: 1; }
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
 .user-avatar {
   width: 34px; height: 34px;
   border-radius: 50%;
   background: linear-gradient(135deg, #7c6af7, #e96af5);
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 0.85rem;
-  flex-shrink: 0;
 }
+
+.user-avatar-img {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.hidden-input { display: none; }
 
 .user-info { flex: 1; min-width: 0; }
 .user-name { font-size: 0.85rem; font-weight: 600; color: #e8e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -708,6 +758,11 @@ input:focus { border-color: #7c6af7; }
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 1.1rem;
   margin-bottom: 8px;
+}
+
+.preview-avatar-img {
+  object-fit: cover;
+  background: none;
 }
 
 .preview-name { font-size: 0.85rem; font-weight: 600; color: #e8e8f0; }

@@ -8,7 +8,7 @@ const token = ref(localStorage.getItem(TOKEN_KEY))
 const user  = ref(JSON.parse(localStorage.getItem(USER_KEY) || 'null'))
 
 export function useAuth() {
-  const { post, loading, error } = useApi()
+  const { post, upload, loading, error } = useApi()
 
   const isAuthenticated = computed(() => !!token.value)
 
@@ -42,5 +42,14 @@ export function useAuth() {
     try { await post('/logout') } finally { clear() }
   }
 
-  return { user, token, isAuthenticated, loading, error, login, register, logout }
+  async function updateAvatar(file) {
+    const fd = new FormData()
+    fd.append('avatar', file)
+    const data = await upload('/profile/avatar', fd)
+    user.value = { ...user.value, avatar: data.avatar }
+    localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+    return data.avatar
+  }
+
+  return { user, token, isAuthenticated, loading, error, login, register, logout, updateAvatar }
 }
