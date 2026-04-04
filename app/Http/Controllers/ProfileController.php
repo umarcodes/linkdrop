@@ -93,12 +93,31 @@ class ProfileController extends Controller
             $browser = 'Safari';
         }
 
+        $ip = $request->ip();
+        $country = null;
+
+        // Skip private/loopback IPs
+        if ($ip && ! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            $country = null;
+        } elseif ($ip && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            $ch = curl_init("http://ip-api.com/json/{$ip}?fields=countryCode");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+            $geo = curl_exec($ch);
+            curl_close($ch);
+            if ($geo) {
+                $data = json_decode($geo, true);
+                $country = $data['countryCode'] ?? null;
+            }
+        }
+
         $link->clicks()->create([
-            'ip' => $request->ip(),
+            'ip' => $ip,
             'user_agent' => $ua,
             'referrer' => $referrer,
             'device' => $device,
             'browser' => $browser,
+            'country' => $country,
         ]);
 
         $webhooks = $user->webhooks()->where('event', 'link.clicked')->where('is_active', true)->get();
