@@ -22,6 +22,7 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('/waitlist', [WaitlistController::class, 'join']);
 });
 
+Route::get('/domain-lookup', [ProfileController::class, 'domainLookup']);
 Route::get('/p/{username}', [ProfileController::class, 'show']);
 Route::post('/p/{username}/click/{linkId}', [ProfileController::class, 'trackClick']);
 Route::post('/p/{username}/verify/{linkId}', [ProfileController::class, 'verifyLinkPassword']);

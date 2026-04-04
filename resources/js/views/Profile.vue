@@ -160,7 +160,20 @@ const initial = computed(() => profile.value?.name?.[0]?.toUpperCase() || '?')
 async function fetchProfile() {
   loading.value = true
   try {
-    profile.value = await get(`/p/${route.params.username}`)
+    let username = route.params.username
+
+    // Custom domain: resolve username from host
+    if (!username) {
+      const res = await get(`/domain-lookup?host=${window.location.hostname}`)
+      username = res.username
+    }
+
+    if (!username) {
+      notFound.value = true
+      return
+    }
+
+    profile.value = await get(`/p/${username}`)
     applyProfileMeta(profile.value)
   } catch {
     notFound.value = true

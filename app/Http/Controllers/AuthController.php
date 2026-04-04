@@ -134,6 +134,8 @@ class AuthController extends Controller
 
     public function updateProfile(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'bio' => ['nullable', 'string', 'max:500'],
@@ -143,11 +145,12 @@ class AuthController extends Controller
             'theme.card' => ['nullable', 'string', 'max:20'],
             'theme.text' => ['nullable', 'string', 'max:20'],
             'badge_available_for_hire' => ['sometimes', 'boolean'],
+            'custom_domain' => ['sometimes', 'nullable', 'string', 'max:255', 'unique:users,custom_domain,'.$user->id],
         ]);
 
-        $request->user()->update($validated);
+        $user->update($validated);
 
-        return response()->json($request->user()->fresh());
+        return response()->json($user->fresh());
     }
 
     public function uploadAvatar(Request $request): JsonResponse

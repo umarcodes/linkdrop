@@ -390,6 +390,11 @@
           </div>
 
           <div class="field">
+            <label>Custom Domain <span class="field-hint">Pro only — point your domain's DNS to this server first</span></label>
+            <input v-model="profileForm.custom_domain" type="text" placeholder="yourname.com" />
+          </div>
+
+          <div class="field">
             <label>Theme</label>
             <div class="theme-presets">
               <button
@@ -1016,7 +1021,7 @@ onMounted(() => {
   fetchLinks()
   fetchAnalytics()
   fetchWebhooks()
-  profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '', theme: user.value?.theme || {}, badge_available_for_hire: user.value?.badge_available_for_hire || false }
+  profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '', theme: user.value?.theme || {}, badge_available_for_hire: user.value?.badge_available_for_hire || false, custom_domain: user.value?.custom_domain || '' }
 })
 </script>
 
