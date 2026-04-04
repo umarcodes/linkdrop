@@ -24,6 +24,7 @@ class User extends Authenticatable
         'badge_available_for_hire',
         'badge_verified',
         'is_admin',
+        'plan',
     ];
 
     protected $hidden = [
@@ -56,5 +57,15 @@ class User extends Authenticatable
     public function webhooks(): HasMany
     {
         return $this->hasMany(Webhook::class);
+    }
+
+    public function isPro(): bool
+    {
+        return in_array($this->plan, ['pro', 'admin'], true) || $this->is_admin;
+    }
+
+    public function maxLinks(): int
+    {
+        return $this->isPro() ? 999 : 10;
     }
 }

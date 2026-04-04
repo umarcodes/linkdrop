@@ -36,6 +36,7 @@ class AdminController extends Controller
         $validated = $request->validate([
             'badge_verified' => ['sometimes', 'boolean'],
             'is_admin' => ['sometimes', 'boolean'],
+            'plan' => ['sometimes', 'string', 'in:free,pro'],
         ]);
 
         $user->update($validated);
