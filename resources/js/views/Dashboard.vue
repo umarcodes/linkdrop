@@ -67,7 +67,7 @@
             </div>
             <div class="field">
               <label>URL</label>
-              <input v-model="newLink.url" type="url" placeholder="example.com" required />
+              <input v-model="newLink.url" type="text" placeholder="example.com" required />
             </div>
             <div v-if="addError" class="error-box">{{ addError }}</div>
             <button type="submit" :disabled="addLoading" class="btn-primary">
@@ -88,7 +88,7 @@
                 <input v-model="editForm.icon" class="edit-icon-input" placeholder="🔗" maxlength="10" title="Icon emoji" aria-label="Link icon" />
                 <input v-model="editForm.title" class="edit-title-input" placeholder="Title" required aria-label="Link title" />
               </div>
-              <input v-model="editForm.url" type="url" placeholder="example.com" required class="edit-url-input" aria-label="Link URL" />
+              <input v-model="editForm.url" type="text" placeholder="example.com" required class="edit-url-input" aria-label="Link URL" />
               <div class="edit-actions">
                 <button type="submit" :disabled="editLoading" class="btn-save">
                   <span v-if="editLoading" class="spinner spinner-sm" />
