@@ -42,7 +42,7 @@
         </button>
         <input ref="avatarInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden-input" @change="handleAvatarUpload" />
         <div class="user-info">
-          <div class="user-name">{{ user?.name }}</div>
+          <div class="user-name">{{ user?.name }} <span v-if="user?.plan === 'pro'" class="plan-badge">PRO</span></div>
           <div class="user-handle">@{{ user?.username }}</div>
         </div>
         <button
@@ -68,7 +68,7 @@
       <!-- Links Tab -->
       <div v-if="activeTab === 'links'" class="panel">
         <div class="panel-header">
-          <h2>My Links</h2>
+          <h2>My Links <span class="link-limit-badge">{{ links.length }}/{{ user?.plan === 'pro' || user?.is_admin ? '∞' : 10 }}</span></h2>
           <div style="display:flex;gap:8px">
             <button class="btn-add" @click="addingHeader = !addingHeader; showAddForm = false">
               {{ addingHeader ? '✕ Cancel' : '+ Section' }}
@@ -457,7 +457,7 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>Name</th><th>Username</th><th>Email</th><th>Links</th><th>Views</th><th>Verified</th><th>Admin</th><th></th>
+                  <th>Name</th><th>Username</th><th>Email</th><th>Links</th><th>Views</th><th>Plan</th><th>Verified</th><th>Admin</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -467,6 +467,12 @@
                   <td>{{ u.email }}</td>
                   <td>{{ u.links_count }}</td>
                   <td>{{ u.profile_views_count }}</td>
+                  <td>
+                    <select :value="u.plan" @change="adminToggle(u, 'plan', $event)" style="background:#0d0d15;border:1px solid #2a2a3a;border-radius:4px;color:#a0a0b0;font-size:0.75rem;padding:2px 6px">
+                      <option value="free">Free</option>
+                      <option value="pro">Pro</option>
+                    </select>
+                  </td>
                   <td>
                     <input type="checkbox" :checked="u.badge_verified" @change="adminToggle(u, 'badge_verified', $event)" />
                   </td>
@@ -848,11 +854,12 @@ async function fetchAdminData() {
 }
 
 async function adminToggle(u, field, event) {
+  const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value
   try {
-    await patchAdmin(`/admin/users/${u.id}`, { [field]: event.target.checked })
-    u[field] = event.target.checked
+    await patchAdmin(`/admin/users/${u.id}`, { [field]: value })
+    u[field] = value
   } catch {
-    event.target.checked = !event.target.checked
+    if (event.target.type === 'checkbox') { event.target.checked = !value }
     toast.error('Failed to update user')
   }
 }
@@ -1036,6 +1043,8 @@ onMounted(() => {
 .user-info { flex: 1; min-width: 0; }
 .user-name { font-size: 0.85rem; font-weight: 600; color: #e8e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-handle { font-size: 0.75rem; color: #666; }
+.plan-badge { font-size: 0.6rem; font-weight: 700; background: linear-gradient(135deg,#7c6af7,#e96af5); color: #fff; border-radius: 4px; padding: 1px 5px; vertical-align: middle; }
+.link-limit-badge { font-size: 0.7rem; font-weight: 400; color: #555; margin-left: 6px; }
 
 .logout-btn {
   background: none; border: none; color: #666;

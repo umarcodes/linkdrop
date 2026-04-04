@@ -35,9 +35,15 @@ class LinkController extends Controller
             'max_clicks' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $order = $request->user()->links()->max('order') + 1;
+        $user = $request->user();
+        $currentCount = $user->links()->count();
+        if ($currentCount >= $user->maxLinks()) {
+            return response()->json(['message' => "You have reached the link limit for the {$user->plan} plan. Upgrade to Pro for unlimited links."], 422);
+        }
 
-        $link = $request->user()->links()->create([
+        $order = $user->links()->max('order') + 1;
+
+        $link = $user->links()->create([
             ...$validated,
             'order' => $order,
             'url' => $isHeader ? null : ($validated['url'] ?? null),
