@@ -43,18 +43,24 @@ class AnalyticsController extends Controller
             ->where('created_at', '>=', $since)
             ->count();
 
-        $clicks = LinkClick::whereIn('link_id', $linkIds)
+        $deviceRows = LinkClick::whereIn('link_id', $linkIds)
             ->where('created_at', '>=', $since)
-            ->pluck('user_agent');
+            ->whereNotNull('device')
+            ->select('device', DB::raw('COUNT(*) as count'))
+            ->groupBy('device')
+            ->get();
 
-        $devices = ['Mobile' => 0, 'Desktop' => 0];
-        foreach ($clicks as $ua) {
-            if (preg_match('/Mobile|Android|iPhone|iPad/i', (string) $ua)) {
-                $devices['Mobile']++;
-            } else {
-                $devices['Desktop']++;
-            }
-        }
+        $devices = $deviceRows->mapWithKeys(fn ($r) => [ucfirst($r->device) => $r->count]);
+
+        $browserRows = LinkClick::whereIn('link_id', $linkIds)
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('browser')
+            ->select('browser', DB::raw('COUNT(*) as count'))
+            ->groupBy('browser')
+            ->orderByDesc('count')
+            ->get();
+
+        $browsers = $browserRows->mapWithKeys(fn ($r) => [$r->browser => $r->count]);
 
         $referrers = LinkClick::whereIn('link_id', $linkIds)
             ->where('created_at', '>=', $since)
@@ -78,6 +84,7 @@ class AnalyticsController extends Controller
             'per_link' => $perLink,
             'daily_clicks' => $dailyClicks,
             'devices' => $devices,
+            'browsers' => $browsers,
             'referrers' => $referrers,
             'peak_hours' => $peakHours,
             'days' => $days,
@@ -91,15 +98,15 @@ class AnalyticsController extends Controller
 
         $clicks = LinkClick::whereIn('link_id', $linkIds)
             ->join('links', 'links.id', '=', 'link_clicks.link_id')
-            ->select('links.title', 'links.url', 'link_clicks.ip', 'link_clicks.user_agent', 'link_clicks.referrer', 'link_clicks.created_at')
+            ->select('links.title', 'links.url', 'link_clicks.ip', 'link_clicks.user_agent', 'link_clicks.referrer', 'link_clicks.device', 'link_clicks.browser', 'link_clicks.created_at')
             ->orderBy('link_clicks.created_at', 'desc')
             ->get();
 
         return response()->streamDownload(function () use ($clicks) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Link Title', 'URL', 'IP', 'User Agent', 'Referrer', 'Clicked At']);
+            fputcsv($handle, ['Link Title', 'URL', 'IP', 'User Agent', 'Referrer', 'Device', 'Browser', 'Clicked At']);
             foreach ($clicks as $click) {
-                fputcsv($handle, [$click->title, $click->url, $click->ip, $click->user_agent, $click->referrer, $click->created_at]);
+                fputcsv($handle, [$click->title, $click->url, $click->ip, $click->user_agent, $click->referrer, $click->device, $click->browser, $click->created_at]);
             }
             fclose($handle);
         }, 'analytics-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv']);

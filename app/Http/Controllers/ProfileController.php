@@ -72,10 +72,33 @@ class ProfileController extends Controller
             $referrer = isset($parsed['host']) ? $parsed['host'] : $referrer;
         }
 
+        $ua = $request->userAgent() ?? '';
+        $device = 'desktop';
+        if (preg_match('/tablet|ipad|playbook|silk/i', $ua)) {
+            $device = 'tablet';
+        } elseif (preg_match('/mobile|android|iphone|ipod|blackberry|opera mini|iemobile/i', $ua)) {
+            $device = 'mobile';
+        }
+
+        $browser = 'Other';
+        if (preg_match('/Edg\//i', $ua)) {
+            $browser = 'Edge';
+        } elseif (preg_match('/OPR\//i', $ua)) {
+            $browser = 'Opera';
+        } elseif (preg_match('/Chrome\//i', $ua)) {
+            $browser = 'Chrome';
+        } elseif (preg_match('/Firefox\//i', $ua)) {
+            $browser = 'Firefox';
+        } elseif (preg_match('/Safari\//i', $ua)) {
+            $browser = 'Safari';
+        }
+
         $link->clicks()->create([
             'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
+            'user_agent' => $ua,
             'referrer' => $referrer,
+            'device' => $device,
+            'browser' => $browser,
         ]);
 
         $webhooks = $user->webhooks()->where('event', 'link.clicked')->where('is_active', true)->get();
