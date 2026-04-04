@@ -25,20 +25,22 @@
       <p v-if="profile.bio" class="profile-bio">{{ profile.bio }}</p>
 
       <div class="links-list">
-        <a
-          v-for="link in profile.links"
-          :key="link.id"
-          :href="link.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="link-item"
-          :class="{ 'is-copy': isCopyLink(link.url) }"
-          @click.prevent="handleLinkClick(link)"
-        >
-          <span class="link-icon">{{ link.icon || detectSocialIcon(link.url) || '🔗' }}</span>
-          <span class="link-title">{{ link.title }}</span>
-          <span class="link-arrow">{{ copiedLinkId === link.id ? '✓' : (isCopyLink(link.url) ? '⎘' : '→') }}</span>
-        </a>
+        <template v-for="link in profile.links" :key="link.id">
+          <div v-if="link.is_header" class="link-section-header">{{ link.title }}</div>
+          <a
+            v-else
+            :href="link.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="link-item"
+            :class="{ 'is-copy': isCopyLink(link.url) }"
+            @click.prevent="handleLinkClick(link)"
+          >
+            <span class="link-icon">{{ link.icon || detectSocialIcon(link.url) || '🔗' }}</span>
+            <span class="link-title">{{ link.title }}</span>
+            <span class="link-arrow">{{ copiedLinkId === link.id ? '✓' : (isCopyLink(link.url) ? '⎘' : '→') }}</span>
+          </a>
+        </template>
       </div>
 
       <div class="profile-actions">
@@ -252,6 +254,16 @@ onMounted(fetchProfile)
 .profile-bio { color: #a0a0b0; font-size: 0.9rem; text-align: center; max-width: 320px; margin-bottom: 24px; line-height: 1.5; }
 
 .links-list { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+
+.link-section-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #666;
+  padding: 8px 4px 2px;
+  margin-top: 8px;
+}
 
 .link-item {
   display: flex;

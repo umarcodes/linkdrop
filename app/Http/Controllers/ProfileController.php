@@ -15,12 +15,17 @@ class ProfileController extends Controller
         $user->profileViews()->create(['ip' => $request->ip()]);
 
         $links = $user->links()
-            ->where('is_active', true)
-            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
-            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+            ->where(function ($q) {
+                $q->where('is_header', true)
+                    ->orWhere(function ($q) {
+                        $q->where('is_active', true)
+                            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+                            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
+                    });
+            })
             ->orderByDesc('is_pinned')
             ->orderBy('order')
-            ->get(['id', 'title', 'url', 'icon']);
+            ->get(['id', 'title', 'url', 'icon', 'is_header']);
 
         return response()->json([
             'name' => $user->name,
@@ -35,7 +40,7 @@ class ProfileController extends Controller
     {
         $user = User::where('username', $username)->firstOrFail();
 
-        $link = $user->links()->where('id', $linkId)->where('is_active', true)->firstOrFail();
+        $link = $user->links()->where('id', $linkId)->where('is_active', true)->where('is_header', false)->firstOrFail();
 
         $referrer = $request->header('Referer');
         if ($referrer) {
