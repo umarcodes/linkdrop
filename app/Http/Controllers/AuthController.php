@@ -7,8 +7,11 @@ use App\Rules\NotReservedUsername;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -30,6 +33,27 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken('linkdrop')->plainTextToken;
+
+        $verificationToken = Str::random(64);
+
+        DB::table('email_verification_tokens')->insert([
+            'email' => $user->email,
+            'token' => hash('sha256', $verificationToken),
+            'created_at' => now(),
+        ]);
+
+        $url = config('app.url').'/app/verify-email?token='.$verificationToken.'&email='.urlencode($user->email);
+
+        try {
+            Mail::raw(
+                "Hi {$user->name},\n\nWelcome to LinkDrop! Please verify your email:\n\n{$url}\n\nThis link expires in 60 minutes.",
+                function ($m) use ($user) {
+                    $m->to($user->email)->subject('Verify your email address');
+                }
+            );
+        } catch (\Throwable) {
+            // Non-fatal — user can re-request from dashboard
+        }
 
         return response()->json(['user' => $user, 'token' => $token], 201);
     }
