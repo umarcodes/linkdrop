@@ -13,6 +13,7 @@ class LinkClick extends Model
         'link_id',
         'ip',
         'user_agent',
+        'referrer',
     ];
 
     protected function casts(): array

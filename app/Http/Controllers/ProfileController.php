@@ -37,9 +37,16 @@ class ProfileController extends Controller
 
         $link = $user->links()->where('id', $linkId)->where('is_active', true)->firstOrFail();
 
+        $referrer = $request->header('Referer');
+        if ($referrer) {
+            $parsed = parse_url($referrer);
+            $referrer = isset($parsed['host']) ? $parsed['host'] : $referrer;
+        }
+
         $link->clicks()->create([
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
+            'referrer' => $referrer,
         ]);
 
         return response()->json(['message' => 'Click tracked']);

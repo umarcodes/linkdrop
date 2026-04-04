@@ -30,4 +30,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/links/reorder', [LinkController::class, 'reorder']);
 
     Route::get('/analytics', [AnalyticsController::class, 'index']);
+    Route::get('/analytics/export', [AnalyticsController::class, 'export']);
 });
