@@ -12,6 +12,7 @@ class LinkController extends Controller
     {
         $links = $request->user()
             ->links()
+            ->orderByDesc('is_pinned')
             ->orderBy('order')
             ->get();
 
@@ -55,6 +56,7 @@ class LinkController extends Controller
             'url' => ['sometimes', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
             'is_active' => ['sometimes', 'boolean'],
+            'is_pinned' => ['sometimes', 'boolean'],
         ]);
 
         $link->update($validated);

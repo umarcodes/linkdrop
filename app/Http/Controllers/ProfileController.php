@@ -16,6 +16,7 @@ class ProfileController extends Controller
 
         $links = $user->links()
             ->where('is_active', true)
+            ->orderByDesc('is_pinned')
             ->orderBy('order')
             ->get(['id', 'title', 'url', 'icon']);
 

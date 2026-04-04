@@ -18,13 +18,15 @@ class Link extends Model
         'icon',
         'order',
         'is_active',
+        'is_pinned',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
-            'order'     => 'integer',
+            'is_pinned' => 'boolean',
+            'order' => 'integer',
         ];
     }
 
