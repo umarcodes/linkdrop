@@ -135,6 +135,7 @@
                   </div>
                 </div>
                 <input v-model="editForm.password" type="text" placeholder="Password protect (leave blank for none)" class="edit-url-input" aria-label="Link password" />
+                <input v-model.number="editForm.max_clicks" type="number" min="1" placeholder="Max clicks (leave blank for unlimited)" class="edit-url-input" aria-label="Max clicks" />
               </template>
               <div class="edit-actions">
                 <button type="submit" :disabled="editLoading" class="btn-save">
@@ -454,6 +455,7 @@ function startEdit(link) {
         starts_at: link.starts_at ? link.starts_at.slice(0, 16) : '',
         ends_at:   link.ends_at   ? link.ends_at.slice(0, 16)   : '',
         password: '',
+        max_clicks: link.max_clicks || null,
       }
 }
 

@@ -20,7 +20,9 @@ class ProfileController extends Controller
                     ->orWhere(function ($q) {
                         $q->where('is_active', true)
                             ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
-                            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
+                            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+                            ->where(fn ($q) => $q->whereNull('max_clicks')
+                                ->orWhereRaw('(SELECT COUNT(*) FROM link_clicks WHERE link_clicks.link_id = links.id) < max_clicks'));
                     });
             })
             ->orderByDesc('is_pinned')
