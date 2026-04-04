@@ -65,6 +65,24 @@ class AuthController extends Controller
         return response()->json($request->user());
     }
 
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $request->validate([
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Incorrect password.'], 422);
+        }
+
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json(['message' => 'Account deleted.']);
+    }
+
     public function updateProfile(Request $request): JsonResponse
     {
         $validated = $request->validate([

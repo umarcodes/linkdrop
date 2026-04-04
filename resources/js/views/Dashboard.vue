@@ -233,6 +233,23 @@
             <span v-else>Save changes</span>
           </button>
         </form>
+
+        <div class="danger-zone">
+          <h3 class="danger-title">Danger Zone</h3>
+          <p class="danger-desc">Permanently delete your account and all your links. This cannot be undone.</p>
+          <button v-if="!showDeleteConfirm" class="btn-danger" @click="showDeleteConfirm = true">Delete account</button>
+          <div v-else class="delete-confirm">
+            <input v-model="deletePassword" type="password" placeholder="Enter your password to confirm" class="delete-input" />
+            <div v-if="deleteError" class="error-box">{{ deleteError }}</div>
+            <div class="delete-actions">
+              <button class="btn-danger-confirm" :disabled="deleteLoading" @click="handleDeleteAccount">
+                <span v-if="deleteLoading" class="spinner spinner-sm" />
+                <span v-else>Yes, delete everything</span>
+              </button>
+              <button class="btn-cancel-edit" @click="showDeleteConfirm = false; deletePassword = ''">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -308,6 +325,10 @@ const dragOverId = ref(null)
 
 const profileForm = ref({ name: '', bio: '' })
 const profileError = ref('')
+const showDeleteConfirm = ref(false)
+const deletePassword = ref('')
+const deleteError = ref('')
+const { del: delAccount, loading: deleteLoading } = useApi()
 
 const newLink = ref({ title: '', url: '', icon: '' })
 
@@ -463,6 +484,17 @@ async function handleLogout() {
   confirmLogout.value = false
   await logout()
   router.push({ name: 'login' })
+}
+
+async function handleDeleteAccount() {
+  deleteError.value = ''
+  try {
+    await post('/account/delete', { password: deletePassword.value })
+    logout()
+    router.push({ name: 'login' })
+  } catch (e) {
+    deleteError.value = typeof e === 'string' ? e : 'Incorrect password.'
+  }
 }
 
 async function saveProfile() {
@@ -838,6 +870,36 @@ input:focus { border-color: #7c6af7; }
 .btn-cancel-edit:hover { border-color: #666; color: #e8e8f0; }
 
 .profile-form { max-width: 480px; }
+
+.danger-zone {
+  margin-top: 40px;
+  border-top: 1px solid #2a1010;
+  padding-top: 24px;
+  max-width: 480px;
+}
+.danger-title { font-size: 0.95rem; font-weight: 600; color: #f87171; margin-bottom: 8px; }
+.danger-desc { font-size: 0.85rem; color: #666; margin-bottom: 16px; }
+.btn-danger {
+  background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 8px; padding: 9px 18px; color: #f87171;
+  font-family: inherit; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background 0.2s;
+}
+.btn-danger:hover { background: rgba(248,113,113,0.2); }
+.delete-confirm { display: flex; flex-direction: column; gap: 10px; }
+.delete-input {
+  background: #0a0a0f; border: 1px solid rgba(248,113,113,0.3); border-radius: 8px;
+  padding: 10px 12px; color: #e8e8f0; font-family: inherit; font-size: 0.9rem;
+  outline: none; transition: border-color 0.2s; width: 100%;
+}
+.delete-input:focus { border-color: #f87171; }
+.delete-actions { display: flex; gap: 10px; }
+.btn-danger-confirm {
+  background: #f87171; border: none; border-radius: 8px; padding: 9px 18px;
+  color: white; font-family: inherit; font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.btn-danger-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-danger-confirm:hover:not(:disabled) { opacity: 0.85; }
 
 .bio-input {
   width: 100%;
