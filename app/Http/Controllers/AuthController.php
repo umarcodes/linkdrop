@@ -65,6 +65,18 @@ class AuthController extends Controller
         return response()->json($request->user());
     }
 
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'bio' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $request->user()->update($validated);
+
+        return response()->json($request->user()->fresh());
+    }
+
     public function uploadAvatar(Request $request): JsonResponse
     {
         $request->validate([
