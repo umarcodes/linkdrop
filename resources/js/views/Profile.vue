@@ -38,7 +38,7 @@
           >
             <span class="link-icon">{{ link.icon || detectSocialIcon(link.url) || '🔗' }}</span>
             <span class="link-title">{{ link.title }}</span>
-            <span class="link-arrow">{{ copiedLinkId === link.id ? '✓' : (isCopyLink(link.url) ? '⎘' : '→') }}</span>
+            <span class="link-arrow">{{ copiedLinkId === link.id ? '✓' : (link.is_password_protected ? '🔒' : (isCopyLink(link.url) ? '⎘' : '→')) }}</span>
           </a>
         </template>
       </div>
@@ -52,6 +52,31 @@
 
       <div class="made-with">
         Made with <span class="brand">LinkDrop</span>
+      </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div v-if="passwordModal.link" class="pw-overlay" @click.self="closePasswordModal">
+      <div class="pw-modal">
+        <div class="pw-title">🔒 This link is password protected</div>
+        <p class="pw-desc">Enter the password to continue.</p>
+        <form @submit.prevent="submitPassword">
+          <input
+            v-model="passwordModal.value"
+            type="password"
+            class="pw-input"
+            placeholder="Password"
+            autofocus
+          />
+          <div v-if="passwordModal.error" class="pw-error">{{ passwordModal.error }}</div>
+          <div class="pw-actions">
+            <button type="submit" class="btn-primary" :disabled="passwordModal.loading">
+              <span v-if="passwordModal.loading" class="spinner" />
+              <span v-else>Unlock</span>
+            </button>
+            <button type="button" class="btn-pw-cancel" @click="closePasswordModal">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -71,6 +96,29 @@ const loading  = ref(true)
 const notFound = ref(false)
 const copied      = ref(false)
 const copiedLinkId = ref(null)
+
+const passwordModal = ref({ link: null, value: '', error: '', loading: false })
+
+function closePasswordModal() {
+  passwordModal.value = { link: null, value: '', error: '', loading: false }
+}
+
+async function submitPassword() {
+  const link = passwordModal.value.link
+  passwordModal.value.loading = true
+  passwordModal.value.error = ''
+  try {
+    const res = await post(`/p/${route.params.username}/verify/${link.id}`, {
+      password: passwordModal.value.value,
+    })
+    closePasswordModal()
+    window.open(res.url, '_blank', 'noopener,noreferrer')
+    try { await post(`/p/${route.params.username}/click/${link.id}`) } catch {}
+  } catch {
+    passwordModal.value.error = 'Incorrect password.'
+    passwordModal.value.loading = false
+  }
+}
 
 const profileUrl = computed(() => window.location.href)
 const qrUrl = computed(() =>
@@ -106,6 +154,10 @@ function isCopyLink(url) {
 }
 
 async function handleLinkClick(link) {
+  if (link.is_password_protected) {
+    passwordModal.value = { link, value: '', error: '', loading: false }
+    return
+  }
   if (isCopyLink(link.url)) {
     const text = link.url.replace(/^copy:/i, '')
     await navigator.clipboard.writeText(text)
@@ -309,4 +361,49 @@ onMounted(fetchProfile)
 
 .made-with { font-size: 0.78rem; color: #444; }
 .brand { color: #7c6af7; font-weight: 600; }
+
+.pw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.pw-modal {
+  background: #111118;
+  border: 1px solid #2a2a3a;
+  border-radius: 16px;
+  padding: 32px;
+  width: 340px;
+  max-width: 90vw;
+}
+.pw-title { font-weight: 600; font-size: 1rem; margin-bottom: 8px; }
+.pw-desc { font-size: 0.85rem; color: #666; margin-bottom: 20px; }
+.pw-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0d0d15;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  color: #e8e8f0;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  outline: none;
+  margin-bottom: 12px;
+}
+.pw-input:focus { border-color: #7c6af7; }
+.pw-error { color: #f87171; font-size: 0.82rem; margin-bottom: 12px; }
+.pw-actions { display: flex; gap: 8px; }
+.btn-pw-cancel {
+  background: transparent;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: #666;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn-pw-cancel:hover { border-color: #444; color: #a0a0b0; }
 </style>
