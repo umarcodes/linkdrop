@@ -30,12 +30,17 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
+            'password' => 'hashed',
         ];
     }
 
     public function links(): HasMany
     {
         return $this->hasMany(Link::class);
+    }
+
+    public function profileViews(): HasMany
+    {
+        return $this->hasMany(ProfileView::class);
     }
 }

@@ -167,6 +167,10 @@
         <template v-else>
           <div class="stat-grid">
             <div class="stat-card">
+              <div class="stat-value">{{ analytics.total_views ?? 0 }}</div>
+              <div class="stat-label">Profile Views</div>
+            </div>
+            <div class="stat-card">
               <div class="stat-value">{{ analytics.total_clicks ?? 0 }}</div>
               <div class="stat-label">Total Clicks</div>
             </div>
@@ -837,7 +841,7 @@ input:focus { border-color: #7c6af7; }
 .empty-state.small { padding: 16px 0; }
 
 /* Analytics */
-.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 28px; }
 
 .stat-card {
   background: #111118;

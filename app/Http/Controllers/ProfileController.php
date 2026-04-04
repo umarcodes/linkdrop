@@ -8,9 +8,11 @@ use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
-    public function show(string $username): JsonResponse
+    public function show(Request $request, string $username): JsonResponse
     {
         $user = User::where('username', $username)->firstOrFail();
+
+        $user->profileViews()->create(['ip' => $request->ip()]);
 
         $links = $user->links()
             ->where('is_active', true)
