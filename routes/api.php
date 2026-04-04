@@ -6,6 +6,7 @@ use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicApiController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -35,4 +36,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/analytics', [AnalyticsController::class, 'index']);
     Route::get('/analytics/export', [AnalyticsController::class, 'export']);
+
+    // API key management
+    Route::post('/api-key/generate', [PublicApiController::class, 'generateKey']);
+    Route::post('/api-key/revoke', [PublicApiController::class, 'revokeKey']);
+});
+
+// Public API (API key auth)
+Route::middleware('api.key')->prefix('v1')->group(function () {
+    Route::get('/links', [PublicApiController::class, 'links']);
+    Route::get('/analytics', [PublicApiController::class, 'analytics']);
 });

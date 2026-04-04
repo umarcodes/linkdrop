@@ -349,6 +349,19 @@
           </button>
         </form>
 
+        <div class="api-key-section">
+          <h3 class="section-title" style="margin-bottom:8px">Public API Key</h3>
+          <p style="font-size:0.82rem;color:#666;margin-bottom:12px">Use this key to access your data from external apps. Send it as the <code>X-API-Key</code> header.</p>
+          <div v-if="user?.api_key" class="api-key-display">
+            <code class="api-key-value">{{ user.api_key }}</code>
+            <button class="btn-add" style="font-size:0.78rem" @click="revokeApiKey">Revoke</button>
+          </div>
+          <button v-else class="btn-add" @click="generateApiKey">Generate API key</button>
+          <div style="font-size:0.78rem;color:#555;margin-top:8px" v-if="user?.api_key">
+            GET /api/v1/links &nbsp;·&nbsp; GET /api/v1/analytics
+          </div>
+        </div>
+
         <div class="danger-zone">
           <h3 class="danger-title">Danger Zone</h3>
           <p class="danger-desc">Permanently delete your account and all your links. This cannot be undone.</p>
@@ -680,6 +693,28 @@ async function saveProfile() {
     toast.success('Profile saved')
   } catch (e) {
     profileError.value = typeof e === 'string' ? e : 'Failed to save profile'
+  }
+}
+
+async function generateApiKey() {
+  try {
+    const res = await post('/api-key/generate', {})
+    user.value = { ...user.value, api_key: res.api_key }
+    localStorage.setItem('linkdrop_user', JSON.stringify(user.value))
+    toast.success('API key generated')
+  } catch {
+    toast.error('Failed to generate API key')
+  }
+}
+
+async function revokeApiKey() {
+  try {
+    await post('/api-key/revoke', {})
+    user.value = { ...user.value, api_key: null }
+    localStorage.setItem('linkdrop_user', JSON.stringify(user.value))
+    toast.success('API key revoked')
+  } catch {
+    toast.error('Failed to revoke API key')
   }
 }
 
@@ -1097,6 +1132,24 @@ input:focus { border-color: #7c6af7; }
 .btn-cancel-edit:hover { border-color: #666; color: #e8e8f0; }
 
 .profile-form { max-width: 480px; }
+
+.api-key-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #1e1e2e;
+  max-width: 480px;
+}
+.api-key-display { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.api-key-value {
+  background: #0d0d15;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  color: #a0a0b0;
+  word-break: break-all;
+  flex: 1;
+}
 
 .theme-presets { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .theme-dot {
