@@ -57,6 +57,8 @@ class LinkController extends Controller
             'icon' => ['nullable', 'string', 'max:10'],
             'is_active' => ['sometimes', 'boolean'],
             'is_pinned' => ['sometimes', 'boolean'],
+            'starts_at' => ['sometimes', 'nullable', 'date'],
+            'ends_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:starts_at'],
         ]);
 
         $link->update($validated);
