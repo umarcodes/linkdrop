@@ -32,6 +32,19 @@
       <div class="links-list">
         <template v-for="link in profile.links" :key="link.id">
           <div v-if="link.is_header" class="link-section-header">{{ link.title }}</div>
+          <!-- File download link -->
+          <a
+            v-else-if="link.type === 'file' && link.file_path"
+            :href="link.file_path"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="link-item"
+            @click="() => { try { post(`/p/${profile.username}/click/${link.id}`) } catch {} }"
+          >
+            <span class="link-icon">{{ link.icon || '📄' }}</span>
+            <span class="link-title">{{ link.title }}</span>
+            <span class="link-arrow">⬇</span>
+          </a>
           <!-- Tip Jar widget -->
           <div v-else-if="link.type === 'tip_jar'" class="tip-jar">
             <div class="tip-jar-title">{{ link.title }}</div>

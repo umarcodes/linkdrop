@@ -15,6 +15,7 @@ class Link extends Model
         'user_id',
         'title',
         'url',
+        'file_path',
         'icon',
         'og_image',
         'utm_params',

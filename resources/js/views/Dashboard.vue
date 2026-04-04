@@ -76,7 +76,10 @@
             <button class="btn-add" @click="showTipJarForm = !showTipJarForm; showAddForm = false; addingHeader = false">
               {{ showTipJarForm ? '✕ Cancel' : '💰 Tip Jar' }}
             </button>
-            <button class="btn-add" @click="showAddForm = !showAddForm; addingHeader = false; showTipJarForm = false">
+            <button class="btn-add" @click="showFileForm = !showFileForm; showAddForm = false; addingHeader = false; showTipJarForm = false">
+              {{ showFileForm ? '✕ Cancel' : '📄 File' }}
+            </button>
+            <button class="btn-add" @click="showAddForm = !showAddForm; addingHeader = false; showTipJarForm = false; showFileForm = false">
               {{ showAddForm ? '✕ Cancel' : '+ Add Link' }}
             </button>
           </div>
@@ -105,6 +108,24 @@
             <button type="submit" :disabled="addLoading" class="btn-primary">
               <span v-if="addLoading" class="spinner" />
               <span v-else>Add Tip Jar</span>
+            </button>
+          </form>
+        </Transition>
+
+        <Transition name="slide">
+          <form v-if="showFileForm" class="add-form" @submit.prevent="handleAddFileLink">
+            <div class="field">
+              <label>Title</label>
+              <input v-model="fileForm.title" placeholder="My PDF Document" required />
+            </div>
+            <div class="field">
+              <label>File <span class="field-hint">(PDF, images, docs, zip — max 20 MB)</span></label>
+              <input type="file" ref="fileInputRef" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg,.gif,.webp,.mp3,.mp4,.mov" required class="file-input" />
+            </div>
+            <div v-if="addError" class="error-box">{{ addError }}</div>
+            <button type="submit" :disabled="addLoading" class="btn-primary">
+              <span v-if="addLoading" class="spinner" />
+              <span v-else>Upload &amp; Add</span>
             </button>
           </form>
         </Transition>
@@ -220,6 +241,22 @@
                   <div class="link-title">{{ link.title }}</div>
                   <div class="link-url" style="color:#a090f5;">Tip Jar widget</div>
                 </div>
+              </template>
+              <template v-else-if="link.type === 'file'">
+                <div class="link-icon">📄</div>
+                <div class="link-info">
+                  <div class="link-title">{{ link.title }}</div>
+                  <div class="link-url">{{ link.file_path ? 'File uploaded' : 'No file yet' }}</div>
+                </div>
+                <label class="btn-icon btn-upload" :title="'Upload file for ' + link.title" :for="'file-upload-' + link.id" style="cursor:pointer;">📤
+                  <input
+                    :id="'file-upload-' + link.id"
+                    type="file"
+                    class="hidden-file-input"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg,.gif,.webp,.mp3,.mp4,.mov"
+                    @change="handleFileUpload(link, $event)"
+                  />
+                </label>
               </template>
               <template v-else>
                 <img v-if="link.og_image" :src="link.og_image" class="link-og-thumb" :alt="link.title" />
@@ -636,6 +673,9 @@ const showAddForm  = ref(false)
 const addingHeader = ref(false)
 const showTipJarForm = ref(false)
 const tipJarForm = ref({ title: 'Support my work ☕' })
+const showFileForm = ref(false)
+const fileForm = ref({ title: '' })
+const fileInputRef = ref(null)
 const newHeaderTitle = ref('')
 const confirmLogout = ref(false)
 const links        = ref([])
@@ -858,6 +898,61 @@ async function handleAddTipJar() {
     toast.success('Tip Jar added')
   } catch {
     addError.value = 'Failed to add Tip Jar'
+  }
+}
+
+async function handleAddFileLink() {
+  addError.value = ''
+  const file = fileInputRef.value?.files?.[0]
+  if (!file) { addError.value = 'Please select a file.'; return }
+
+  addLoading.value = true
+  try {
+    // 1. Create the link record
+    const link = await post('/links', { title: fileForm.value.title, type: 'file' })
+    links.value.push(link)
+
+    // 2. Upload the file
+    const token = localStorage.getItem('linkdrop_token')
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(`/api/links/${link.id}/upload-file`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      body: fd,
+    })
+    const data = await res.json()
+    if (!res.ok) { throw new Error(data.message || 'Upload failed') }
+    Object.assign(link, data)
+
+    fileForm.value = { title: '' }
+    showFileForm.value = false
+    toast.success('File link added')
+  } catch (e) {
+    addError.value = e.message || 'Failed to add file link'
+  } finally {
+    addLoading.value = false
+  }
+}
+
+async function handleFileUpload(link, event) {
+  const file = event.target.files?.[0]
+  if (!file) { return }
+  const token = localStorage.getItem('linkdrop_token')
+  const fd = new FormData()
+  fd.append('file', file)
+  try {
+    const res = await fetch(`/api/links/${link.id}/upload-file`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      body: fd,
+    })
+    const data = await res.json()
+    if (!res.ok) { throw new Error(data.message || 'Upload failed') }
+    Object.assign(link, data)
+    toast.success('File updated')
+  } catch (e) {
+    toast.error(e.message || 'Upload failed')
   }
 }
 
@@ -1496,6 +1591,21 @@ input:focus { border-color: #7c6af7; }
 .utm-summary { font-size: 0.78rem; color: #666; cursor: pointer; user-select: none; margin-bottom: 6px; }
 .utm-summary:hover { color: #a090f5; }
 .utm-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+
+.hidden-file-input { display: none; }
+.file-input {
+  width: 100%;
+  background: #0a0a0f;
+  border: 1px solid #1e1e2e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #e8e8f0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.file-input:focus { border-color: #7c6af7; outline: none; }
+.btn-upload { font-size: 1rem; }
 
 .edit-actions { display: flex; gap: 8px; }
 
