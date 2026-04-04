@@ -29,6 +29,9 @@
       </form>
 
       <p class="footer-link">
+        <RouterLink to="/app/forgot-password">Forgot password?</RouterLink>
+      </p>
+      <p class="footer-link">
         Don't have an account? <RouterLink to="/app/register">Create one</RouterLink>
       </p>
     </div>
