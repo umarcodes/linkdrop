@@ -79,8 +79,18 @@
 
         <div v-if="linksLoading" class="loading-state">Loading links…</div>
 
-        <TransitionGroup name="list" tag="div" class="links-list">
-          <div v-for="link in links" :key="link.id" class="link-card">
+        <div class="links-list">
+          <div
+            v-for="link in links"
+            :key="link.id"
+            class="link-card"
+            :class="{ 'drag-over': dragOverId === link.id }"
+            draggable="true"
+            @dragstart="onDragStart(link)"
+            @dragover.prevent="onDragOver(link)"
+            @drop.prevent="onDrop"
+            @dragend="onDragEnd"
+          >
 
             <!-- Edit mode -->
             <form v-if="editingId === link.id" class="edit-form" @submit.prevent="saveEdit(link)">
@@ -100,6 +110,7 @@
 
             <!-- View mode -->
             <template v-else>
+              <div class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">⠿</div>
               <div class="link-icon">{{ link.icon || '🔗' }}</div>
               <div class="link-info">
                 <div class="link-title">{{ link.title }}</div>
@@ -131,7 +142,7 @@
             </template>
 
           </div>
-        </TransitionGroup>
+        </div>
 
         <div v-if="!linksLoading && links.length === 0" class="empty-state">
           No links yet. Add your first link above!
@@ -251,6 +262,9 @@ const deletingId   = ref(null)
 const editingId    = ref(null)
 const editForm     = ref({ title: '', url: '', icon: '' })
 
+const draggingId = ref(null)
+const dragOverId = ref(null)
+
 const newLink = ref({ title: '', url: '', icon: '' })
 
 const userInitial = computed(() => user.value?.name?.[0]?.toUpperCase() || '?')
@@ -334,6 +348,40 @@ async function deleteLink(id) {
   } catch {
     toast.error('Failed to delete link')
     deletingId.value = null
+  }
+}
+
+function onDragStart(link) {
+  draggingId.value = link.id
+}
+
+function onDragOver(link) {
+  if (draggingId.value !== link.id) {
+    dragOverId.value = link.id
+  }
+}
+
+function onDrop() {
+  if (!draggingId.value || !dragOverId.value || draggingId.value === dragOverId.value) { return }
+  const from = links.value.findIndex(l => l.id === draggingId.value)
+  const to   = links.value.findIndex(l => l.id === dragOverId.value)
+  const reordered = [...links.value]
+  reordered.splice(to, 0, reordered.splice(from, 1)[0])
+  reordered.forEach((l, i) => { l.order = i })
+  links.value = reordered
+  saveOrder()
+}
+
+function onDragEnd() {
+  draggingId.value = null
+  dragOverId.value = null
+}
+
+async function saveOrder() {
+  try {
+    await post('/links/reorder', { links: links.value.map(l => ({ id: l.id, order: l.order })) })
+  } catch {
+    toast.error('Failed to save order')
   }
 }
 
@@ -569,6 +617,21 @@ input:focus { border-color: #7c6af7; }
   transition: border-color 0.2s;
 }
 .link-card:hover { border-color: #2e2e3e; }
+
+.drag-handle {
+  font-size: 1.1rem;
+  color: #333;
+  cursor: grab;
+  padding: 0 4px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.drag-handle:active { cursor: grabbing; }
+
+.link-card.drag-over {
+  border-color: #7c6af7;
+  background: rgba(124, 106, 247, 0.05);
+}
 
 .link-icon { font-size: 1.4rem; flex-shrink: 0; }
 .link-info { flex: 1; min-width: 0; }
