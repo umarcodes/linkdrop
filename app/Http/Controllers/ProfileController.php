@@ -25,7 +25,7 @@ class ProfileController extends Controller
             })
             ->orderByDesc('is_pinned')
             ->orderBy('order')
-            ->get(['id', 'title', 'url', 'icon', 'is_header']);
+            ->get(['id', 'title', 'url', 'icon', 'is_header', 'password']);
 
         return response()->json([
             'name' => $user->name,
@@ -34,6 +34,25 @@ class ProfileController extends Controller
             'avatar' => $user->avatar,
             'links' => $links,
         ]);
+    }
+
+    public function verifyLinkPassword(Request $request, string $username, int $linkId): JsonResponse
+    {
+        $user = User::where('username', $username)->firstOrFail();
+
+        $link = $user->links()->where('id', $linkId)->where('is_active', true)->where('is_header', false)->firstOrFail();
+
+        if (empty($link->getRawOriginal('password'))) {
+            return response()->json(['url' => $link->url]);
+        }
+
+        $request->validate(['password' => ['required', 'string']]);
+
+        if ($request->password !== $link->getRawOriginal('password')) {
+            return response()->json(['message' => 'Incorrect password.'], 422);
+        }
+
+        return response()->json(['url' => $link->url]);
     }
 
     public function trackClick(Request $request, string $username, int $linkId): JsonResponse

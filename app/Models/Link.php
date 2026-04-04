@@ -22,7 +22,17 @@ class Link extends Model
         'is_header',
         'starts_at',
         'ends_at',
+        'password',
     ];
+
+    protected $hidden = ['password'];
+
+    protected $appends = ['is_password_protected'];
+
+    public function getIsPasswordProtectedAttribute(): bool
+    {
+        return ! empty($this->attributes['password']);
+    }
 
     protected function casts(): array
     {

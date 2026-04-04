@@ -134,6 +134,7 @@
                     <input v-model="editForm.ends_at" type="datetime-local" class="edit-url-input" aria-label="End date" />
                   </div>
                 </div>
+                <input v-model="editForm.password" type="text" placeholder="Password protect (leave blank for none)" class="edit-url-input" aria-label="Link password" />
               </template>
               <div class="edit-actions">
                 <button type="submit" :disabled="editLoading" class="btn-save">
@@ -155,7 +156,7 @@
               <template v-else>
                 <div class="link-icon">{{ link.icon || '🔗' }}</div>
                 <div class="link-info">
-                  <div class="link-title">{{ link.title }}</div>
+                  <div class="link-title">{{ link.title }} <span v-if="link.is_password_protected" title="Password protected" style="font-size:0.75em;opacity:0.6">🔒</span></div>
                   <div class="link-url">{{ link.url }}</div>
                 </div>
               </template>
@@ -452,6 +453,7 @@ function startEdit(link) {
         icon: link.icon || '',
         starts_at: link.starts_at ? link.starts_at.slice(0, 16) : '',
         ends_at:   link.ends_at   ? link.ends_at.slice(0, 16)   : '',
+        password: '',
       }
 }
 

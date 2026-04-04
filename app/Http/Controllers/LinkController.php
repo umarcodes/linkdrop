@@ -31,6 +31,7 @@ class LinkController extends Controller
             'icon' => ['nullable', 'string', 'max:10'],
             'is_active' => ['boolean'],
             'is_header' => ['boolean'],
+            'password' => ['nullable', 'string', 'max:255'],
         ]);
 
         $order = $request->user()->links()->max('order') + 1;
@@ -65,6 +66,7 @@ class LinkController extends Controller
             'is_header' => ['sometimes', 'boolean'],
             'starts_at' => ['sometimes', 'nullable', 'date'],
             'ends_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:starts_at'],
+            'password' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
         $link->update($validated);
