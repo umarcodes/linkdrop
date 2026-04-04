@@ -32,6 +32,20 @@
       <div class="links-list">
         <template v-for="link in profile.links" :key="link.id">
           <div v-if="link.is_header" class="link-section-header">{{ link.title }}</div>
+          <!-- Embeddable player -->
+          <div v-else-if="embedUrl(link.url)" class="link-embed">
+            <div class="embed-title">{{ link.title }}</div>
+            <iframe
+              :src="embedUrl(link.url)"
+              class="embed-frame"
+              :class="{ 'embed-frame-tall': isYouTube(link.url) }"
+              frameborder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              allowfullscreen
+              loading="lazy"
+            />
+          </div>
+          <!-- Regular link -->
           <a
             v-else
             :href="link.url"
@@ -157,6 +171,31 @@ async function fetchProfile() {
 
 function isCopyLink(url) {
   return /^(mailto:|tel:|sms:)/i.test(url) || /^copy:/i.test(url)
+}
+
+function isYouTube(url) {
+  return /youtube\.com\/watch|youtu\.be\//i.test(url)
+}
+
+function embedUrl(url) {
+  if (!url) { return null }
+
+  // YouTube
+  const ytFull = url.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]+)/)
+  if (ytFull) { return `https://www.youtube.com/embed/${ytFull[1]}` }
+  const ytShort = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/)
+  if (ytShort) { return `https://www.youtube.com/embed/${ytShort[1]}` }
+
+  // Spotify track / album / playlist
+  const spotify = url.match(/open\.spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/)
+  if (spotify) { return `https://open.spotify.com/embed/${spotify[1]}/${spotify[2]}` }
+
+  // SoundCloud — use oEmbed iframe via SoundCloud's widget
+  if (/soundcloud\.com\//i.test(url)) {
+    return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%237c6af7&auto_play=false&show_artwork=true`
+  }
+
+  return null
 }
 
 async function handleLinkClick(link) {
@@ -331,6 +370,31 @@ onMounted(fetchProfile)
 .profile-bio { color: #a0a0b0; font-size: 0.9rem; text-align: center; max-width: 320px; margin-bottom: 24px; line-height: 1.5; }
 
 .links-list { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+
+.link-embed {
+  background: var(--p-card, #111118);
+  border: 1px solid #1e1e2e;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.embed-title {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #888;
+  padding: 10px 14px 6px;
+}
+
+.embed-frame {
+  width: 100%;
+  height: 80px;
+  display: block;
+  border: none;
+}
+
+.embed-frame-tall {
+  height: 220px;
+}
 
 .link-section-header {
   font-size: 0.75rem;
