@@ -17,7 +17,7 @@
             <input v-model="form.name" type="text" placeholder="Jane Doe" required />
           </div>
           <div class="field">
-            <label>Username <span class="field-hint">letters, numbers, _ and - only</span></label>
+            <label>Username</label>
             <div class="input-prefix-wrap">
               <span class="prefix">@</span>
               <input
@@ -28,6 +28,7 @@
                 required
               />
             </div>
+            <span class="field-hint">letters, numbers, _ and - only</span>
           </div>
         </div>
 
@@ -162,7 +163,7 @@ h1 { font-size: 1.5rem; font-weight: 600; text-align: center; color: #e8e8f0; }
 .field { margin-bottom: 16px; }
 
 label { display: block; font-size: 0.85rem; font-weight: 500; color: #a0a0b0; margin-bottom: 6px; }
-.field-hint { font-weight: 400; font-size: 0.78rem; color: #555; }
+.field-hint { display: block; font-weight: 400; font-size: 0.78rem; color: #555; margin-top: 4px; }
 
 input {
   width: 100%;
