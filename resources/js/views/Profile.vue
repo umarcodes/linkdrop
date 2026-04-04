@@ -186,6 +186,21 @@ function isCopyLink(url) {
   return /^(mailto:|tel:|sms:)/i.test(url) || /^copy:/i.test(url)
 }
 
+function buildUrl(link) {
+  if (!link.url || isCopyLink(link.url) || !link.utm_params) { return link.url }
+  const utms = link.utm_params
+  const params = {}
+  if (utms.source)   { params.utm_source = utms.source }
+  if (utms.medium)   { params.utm_medium = utms.medium }
+  if (utms.campaign) { params.utm_campaign = utms.campaign }
+  if (utms.term)     { params.utm_term = utms.term }
+  if (utms.content)  { params.utm_content = utms.content }
+  if (Object.keys(params).length === 0) { return link.url }
+  const u = new URL(link.url)
+  Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v))
+  return u.toString()
+}
+
 function isYouTube(url) {
   return /youtube\.com\/watch|youtu\.be\//i.test(url)
 }
@@ -222,7 +237,7 @@ async function handleLinkClick(link) {
     copiedLinkId.value = link.id
     setTimeout(() => { copiedLinkId.value = null }, 2000)
   } else {
-    window.open(link.url, '_blank', 'noopener,noreferrer')
+    window.open(buildUrl(link), '_blank', 'noopener,noreferrer')
   }
   try {
     await post(`/p/${route.params.username}/click/${link.id}`)
