@@ -25,6 +25,13 @@
         >
           <span class="nav-icon">👤</span> Profile
         </button>
+        <button
+          v-if="user?.is_admin"
+          :class="['nav-btn', activeTab === 'admin' && 'active']"
+          @click="activeTab = 'admin'; fetchAdminData()"
+        >
+          <span class="nav-icon">🛡</span> Admin
+        </button>
       </nav>
 
       <div class="sidebar-user">
@@ -427,6 +434,54 @@
           </div>
         </div>
       </div>
+
+      <!-- Admin Tab -->
+      <div v-if="activeTab === 'admin'" class="panel">
+        <div class="panel-header">
+          <h2>Admin Dashboard</h2>
+          <button class="btn-add" @click="fetchAdminData">↻ Refresh</button>
+        </div>
+
+        <div v-if="adminLoading" class="loading-state">Loading…</div>
+        <template v-else>
+          <div class="stat-grid" style="margin-bottom:28px">
+            <div class="stat-card"><div class="stat-value">{{ adminStats.total_users ?? 0 }}</div><div class="stat-label">Users</div></div>
+            <div class="stat-card"><div class="stat-value">{{ adminStats.total_links ?? 0 }}</div><div class="stat-label">Links</div></div>
+            <div class="stat-card"><div class="stat-value">{{ adminStats.total_clicks ?? 0 }}</div><div class="stat-label">Clicks</div></div>
+            <div class="stat-card"><div class="stat-value">{{ adminStats.total_views ?? 0 }}</div><div class="stat-label">Views</div></div>
+            <div class="stat-card"><div class="stat-value">{{ adminStats.new_users_today ?? 0 }}</div><div class="stat-label">New today</div></div>
+          </div>
+
+          <h3 class="section-title">Users</h3>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th><th>Username</th><th>Email</th><th>Links</th><th>Views</th><th>Verified</th><th>Admin</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="u in adminUsers" :key="u.id">
+                  <td>{{ u.name }}</td>
+                  <td>@{{ u.username }}</td>
+                  <td>{{ u.email }}</td>
+                  <td>{{ u.links_count }}</td>
+                  <td>{{ u.profile_views_count }}</td>
+                  <td>
+                    <input type="checkbox" :checked="u.badge_verified" @change="adminToggle(u, 'badge_verified', $event)" />
+                  </td>
+                  <td>
+                    <input type="checkbox" :checked="u.is_admin" @change="adminToggle(u, 'is_admin', $event)" />
+                  </td>
+                  <td>
+                    <button class="btn-icon btn-delete" @click="adminDeleteUser(u)">🗑</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </div>
     </main>
 
     <!-- Phone Preview -->
@@ -483,6 +538,7 @@ const { post, put, del, loading: addLoading, error: addErr } = useApi()
 const { get: getLinks, loading: linksLoading } = useApi()
 const { get: getAnalytics, loading: analyticsLoading } = useApi()
 const { get: getWebhooks, post: postWebhook, del: delWebhook } = useApi()
+const { get: getAdminStats, patch: patchAdmin, del: delAdmin } = useApi()
 const { put: putEdit, loading: editLoading } = useApi()
 const { patch: patchProfile, loading: profileLoading } = useApi()
 const toast = useToast()
@@ -506,6 +562,9 @@ const draggingId = ref(null)
 const dragOverId = ref(null)
 
 const profileForm = ref({ name: '', bio: '', theme: {} })
+const adminStats = ref({})
+const adminUsers = ref([])
+const adminLoading = ref(false)
 const webhooks = ref([])
 const newWebhook = ref({ url: '', secret: '' })
 const showCustomTheme = ref(false)
@@ -769,6 +828,44 @@ async function saveProfile() {
     toast.success('Profile saved')
   } catch (e) {
     profileError.value = typeof e === 'string' ? e : 'Failed to save profile'
+  }
+}
+
+async function fetchAdminData() {
+  adminLoading.value = true
+  try {
+    const [stats, usersRes] = await Promise.all([
+      getAdminStats('/admin/stats'),
+      getAdminStats('/admin/users'),
+    ])
+    adminStats.value = stats
+    adminUsers.value = usersRes.data || usersRes
+  } catch {
+    toast.error('Failed to load admin data')
+  } finally {
+    adminLoading.value = false
+  }
+}
+
+async function adminToggle(u, field, event) {
+  try {
+    await patchAdmin(`/admin/users/${u.id}`, { [field]: event.target.checked })
+    u[field] = event.target.checked
+  } catch {
+    event.target.checked = !event.target.checked
+    toast.error('Failed to update user')
+  }
+}
+
+async function adminDeleteUser(u) {
+  if (!confirm(`Delete user ${u.username}? This cannot be undone.`)) { return }
+  try {
+    await delAdmin(`/admin/users/${u.id}`)
+    adminUsers.value = adminUsers.value.filter(x => x.id !== u.id)
+    adminStats.value.total_users = (adminStats.value.total_users || 1) - 1
+    toast.success('User deleted')
+  } catch {
+    toast.error('Failed to delete user')
   }
 }
 
@@ -1350,6 +1447,13 @@ input:focus { border-color: #7c6af7; }
 .bar-fill { height: 100%; background: linear-gradient(135deg, #7c6af7, #e96af5); border-radius: 4px; transition: width 0.5s ease; }
 .bar-count { font-size: 0.82rem; color: #666; width: 28px; text-align: right; flex-shrink: 0; }
 .bar-ctr { font-size: 0.72rem; color: #555; width: 40px; text-align: right; flex-shrink: 0; }
+
+.admin-table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.admin-table th { color: #666; font-weight: 500; padding: 8px 10px; text-align: left; border-bottom: 1px solid #1e1e2e; }
+.admin-table td { padding: 10px; border-bottom: 1px solid #111118; color: #a0a0b0; }
+.admin-table tr:hover td { background: rgba(124,106,247,0.03); }
+.admin-table input[type=checkbox] { accent-color: #7c6af7; }
 
 .peak-hours-grid { display: flex; gap: 3px; align-items: flex-end; height: 60px; margin-bottom: 28px; }
 .peak-hour-cell { display: flex; flex-direction: column; align-items: center; flex: 1; cursor: default; }

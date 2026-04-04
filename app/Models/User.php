@@ -23,6 +23,7 @@ class User extends Authenticatable
         'api_key',
         'badge_available_for_hire',
         'badge_verified',
+        'is_admin',
     ];
 
     protected $hidden = [
@@ -38,6 +39,7 @@ class User extends Authenticatable
             'theme' => 'array',
             'badge_available_for_hire' => 'boolean',
             'badge_verified' => 'boolean',
+            'is_admin' => 'boolean',
         ];
     }
 
