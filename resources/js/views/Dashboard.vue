@@ -73,7 +73,7 @@
             </div>
             <div class="field">
               <label>URL</label>
-              <input v-model="newLink.url" type="text" placeholder="example.com" required />
+              <input v-model="newLink.url" type="text" placeholder="example.com" required @input="autoFillIcon" />
             </div>
             <div v-if="addError" class="error-box">{{ addError }}</div>
             <button type="submit" :disabled="addLoading" class="btn-primary">
@@ -271,6 +271,7 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '../stores/auth'
 import { useApi } from '../composables/useApi'
 import { useToast } from '../composables/useToast'
+import { detectSocialIcon } from '../composables/useSocialIcon'
 
 const router = useRouter()
 const { user, logout, updateAvatar } = useAuth()
@@ -316,6 +317,13 @@ function dayBarWidth(count) { return `${Math.round((count / maxDay.value) * 100)
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
+}
+
+function autoFillIcon() {
+  if (!newLink.value.icon) {
+    const detected = detectSocialIcon(newLink.value.url)
+    if (detected) { newLink.value.icon = detected }
+  }
 }
 
 function startEdit(link) {
