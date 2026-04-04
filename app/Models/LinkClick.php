@@ -14,6 +14,8 @@ class LinkClick extends Model
         'ip',
         'user_agent',
         'referrer',
+        'device',
+        'browser',
     ];
 
     protected function casts(): array

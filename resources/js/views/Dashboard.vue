@@ -282,6 +282,18 @@
             </div>
           </div>
 
+          <h3 class="section-title">Browser Breakdown</h3>
+          <div v-if="totalBrowserClicks === 0" class="empty-state small">No browser data yet.</div>
+          <div v-else class="bar-chart">
+            <div v-for="(count, browser) in analytics.browsers" :key="browser" class="bar-row">
+              <div class="bar-label">{{ browser }}</div>
+              <div class="bar-track">
+                <div class="bar-fill" :style="{ width: browserBarWidth(count) }" />
+              </div>
+              <div class="bar-count">{{ count }}</div>
+            </div>
+          </div>
+
           <h3 class="section-title">Top Referrers</h3>
           <div v-if="(analytics.referrers || []).length === 0" class="empty-state small">No referrer data yet.</div>
           <div v-else class="bar-chart">
@@ -605,6 +617,9 @@ const maxDay = computed(() => {
 
 const totalDeviceClicks = computed(() => Object.values(analytics.value.devices || {}).reduce((a, b) => a + b, 0))
 function deviceBarWidth(count) { return `${Math.round((count / (totalDeviceClicks.value || 1)) * 100)}%` }
+
+const totalBrowserClicks = computed(() => Object.values(analytics.value.browsers || {}).reduce((a, b) => a + b, 0))
+function browserBarWidth(count) { return `${Math.round((count / (totalBrowserClicks.value || 1)) * 100)}%` }
 
 function barWidth(count) { return `${Math.round((count / maxClicks.value) * 100)}%` }
 function dayBarWidth(count) { return `${Math.round((count / maxDay.value) * 100)}%` }
