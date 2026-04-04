@@ -62,6 +62,15 @@ class AnalyticsController extends Controller
 
         $browsers = $browserRows->mapWithKeys(fn ($r) => [$r->browser => $r->count]);
 
+        $countries = LinkClick::whereIn('link_id', $linkIds)
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('country')
+            ->select('country', DB::raw('COUNT(*) as count'))
+            ->groupBy('country')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->get();
+
         $referrers = LinkClick::whereIn('link_id', $linkIds)
             ->where('created_at', '>=', $since)
             ->whereNotNull('referrer')
@@ -85,6 +94,7 @@ class AnalyticsController extends Controller
             'daily_clicks' => $dailyClicks,
             'devices' => $devices,
             'browsers' => $browsers,
+            'countries' => $countries,
             'referrers' => $referrers,
             'peak_hours' => $peakHours,
             'days' => $days,

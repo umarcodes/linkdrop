@@ -313,6 +313,18 @@
             </div>
           </div>
 
+          <h3 class="section-title">Top Countries</h3>
+          <div v-if="(analytics.countries || []).length === 0" class="empty-state small">No location data yet.</div>
+          <div v-else class="bar-chart">
+            <div v-for="row in analytics.countries" :key="row.country" class="bar-row">
+              <div class="bar-label">{{ row.country }}</div>
+              <div class="bar-track">
+                <div class="bar-fill" :style="{ width: countryBarWidth(row.count) }" />
+              </div>
+              <div class="bar-count">{{ row.count }}</div>
+            </div>
+          </div>
+
           <h3 class="section-title">Top Referrers</h3>
           <div v-if="(analytics.referrers || []).length === 0" class="empty-state small">No referrer data yet.</div>
           <div v-else class="bar-chart">
@@ -640,6 +652,12 @@ function deviceBarWidth(count) { return `${Math.round((count / (totalDeviceClick
 
 const totalBrowserClicks = computed(() => Object.values(analytics.value.browsers || {}).reduce((a, b) => a + b, 0))
 function browserBarWidth(count) { return `${Math.round((count / (totalBrowserClicks.value || 1)) * 100)}%` }
+
+const maxCountry = computed(() => {
+  const counts = (analytics.value.countries || []).map(r => r.count)
+  return counts.length ? Math.max(...counts) : 1
+})
+function countryBarWidth(count) { return `${Math.round((count / maxCountry.value) * 100)}%` }
 
 function barWidth(count) { return `${Math.round((count / maxClicks.value) * 100)}%` }
 function dayBarWidth(count) { return `${Math.round((count / maxDay.value) * 100)}%` }
