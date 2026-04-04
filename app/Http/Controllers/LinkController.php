@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Link;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class LinkController extends Controller
 {
@@ -25,13 +26,13 @@ class LinkController extends Controller
 
         $isHeader = (bool) $request->input('is_header', false);
         $type = $request->input('type', 'link');
-        $isTipJar = $type === 'tip_jar';
+        $isUrlless = $isHeader || in_array($type, ['tip_jar', 'file'], true);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'url' => ($isHeader || $isTipJar) ? ['nullable', 'string'] : ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
+            'url' => $isUrlless ? ['nullable', 'string'] : ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
-            'type' => ['nullable', 'string', 'in:link,tip_jar'],
+            'type' => ['nullable', 'string', 'in:link,tip_jar,file'],
             'og_image' => ['nullable', 'url', 'max:500'],
             'utm_params' => ['nullable', 'array'],
             'utm_params.source' => ['nullable', 'string', 'max:100'],
@@ -56,7 +57,7 @@ class LinkController extends Controller
         $link = $user->links()->create([
             ...$validated,
             'order' => $order,
-            'url' => ($isHeader || $isTipJar) ? null : ($validated['url'] ?? null),
+            'url' => $isUrlless ? null : ($validated['url'] ?? null),
             'is_active' => $validated['is_active'] ?? true,
             'is_header' => $isHeader,
             'type' => $type,
@@ -86,7 +87,7 @@ class LinkController extends Controller
             'utm_params.campaign' => ['nullable', 'string', 'max:100'],
             'utm_params.term' => ['nullable', 'string', 'max:100'],
             'utm_params.content' => ['nullable', 'string', 'max:100'],
-            'type' => ['sometimes', 'nullable', 'string', 'in:link,tip_jar'],
+            'type' => ['sometimes', 'nullable', 'string', 'in:link,tip_jar,file'],
             'is_active' => ['sometimes', 'boolean'],
             'is_pinned' => ['sometimes', 'boolean'],
             'is_header' => ['sometimes', 'boolean'],
@@ -119,6 +120,30 @@ class LinkController extends Controller
         }
 
         return $url;
+    }
+
+    public function uploadFile(Request $request, Link $link): JsonResponse
+    {
+        if ($request->user()->id !== $link->user_id) {
+            abort(403);
+        }
+
+        $request->validate([
+            'file' => ['required', 'file', 'max:20480', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,png,jpg,jpeg,gif,webp,mp3,mp4,mov'],
+        ]);
+
+        // Delete old file
+        if ($link->file_path) {
+            $oldPath = str_replace('/storage/', '', parse_url($link->file_path, PHP_URL_PATH));
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $path = $request->file('file')->store("link-files/{$request->user()->id}", 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $link->update(['file_path' => $url, 'type' => 'file', 'url' => null]);
+
+        return response()->json(['file_path' => $url]);
     }
 
     public function fetchOg(Request $request): JsonResponse
