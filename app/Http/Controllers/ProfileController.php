@@ -34,6 +34,7 @@ class ProfileController extends Controller
             'username' => $user->username,
             'bio' => $user->bio,
             'avatar' => $user->avatar,
+            'theme' => $user->theme,
             'links' => $links,
         ]);
     }

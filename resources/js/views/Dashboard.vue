@@ -302,6 +302,38 @@
             <label>Bio</label>
             <textarea v-model="profileForm.bio" placeholder="Tell visitors a bit about yourself…" rows="3" class="bio-input" />
           </div>
+
+          <div class="field">
+            <label>Theme</label>
+            <div class="theme-presets">
+              <button
+                v-for="preset in themePresets"
+                :key="preset.name"
+                type="button"
+                class="theme-dot"
+                :style="{ background: preset.accent }"
+                :title="preset.name"
+                :class="{ 'theme-dot-active': profileForm.theme?.accent === preset.accent }"
+                @click="profileForm.theme = { ...preset }"
+              />
+              <button type="button" class="theme-dot theme-dot-custom" title="Custom colours" @click="showCustomTheme = !showCustomTheme">+</button>
+            </div>
+            <div v-if="showCustomTheme" class="custom-theme-row">
+              <div class="color-field">
+                <label>Accent</label>
+                <input v-model="profileForm.theme.accent" type="color" />
+              </div>
+              <div class="color-field">
+                <label>Card</label>
+                <input v-model="profileForm.theme.card" type="color" />
+              </div>
+              <div class="color-field">
+                <label>Text</label>
+                <input v-model="profileForm.theme.text" type="color" />
+              </div>
+            </div>
+          </div>
+
           <div v-if="profileError" class="error-box">{{ profileError }}</div>
           <button type="submit" :disabled="profileLoading" class="btn-primary">
             <span v-if="profileLoading" class="spinner" />
@@ -401,7 +433,17 @@ const editForm     = ref({ title: '', url: '', icon: '' })
 const draggingId = ref(null)
 const dragOverId = ref(null)
 
-const profileForm = ref({ name: '', bio: '' })
+const profileForm = ref({ name: '', bio: '', theme: {} })
+const showCustomTheme = ref(false)
+
+const themePresets = [
+  { name: 'Purple (default)', accent: '#7c6af7', card: '#111118', text: '#e8e8f0' },
+  { name: 'Emerald', accent: '#10b981', card: '#0d1a14', text: '#d1fae5' },
+  { name: 'Rose', accent: '#f43f5e', card: '#1a0d10', text: '#ffe4e6' },
+  { name: 'Sky', accent: '#0ea5e9', card: '#0d1520', text: '#e0f2fe' },
+  { name: 'Amber', accent: '#f59e0b', card: '#1a1500', text: '#fef3c7' },
+  { name: 'Slate', accent: '#94a3b8', card: '#0f172a', text: '#e2e8f0' },
+]
 const profileError = ref('')
 const showDeleteConfirm = ref(false)
 const deletePassword = ref('')
@@ -634,7 +676,7 @@ async function saveProfile() {
 onMounted(() => {
   fetchLinks()
   fetchAnalytics()
-  profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '' }
+  profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '', theme: user.value?.theme || {} }
 })
 </script>
 
@@ -1007,6 +1049,22 @@ input:focus { border-color: #7c6af7; }
 .btn-cancel-edit:hover { border-color: #666; color: #e8e8f0; }
 
 .profile-form { max-width: 480px; }
+
+.theme-presets { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.theme-dot {
+  width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; transition: transform 0.15s, border-color 0.15s;
+}
+.theme-dot:hover { transform: scale(1.15); }
+.theme-dot-active { border-color: #fff !important; }
+.theme-dot-custom {
+  background: #2a2a3a; color: #a0a0b0; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.custom-theme-row { display: flex; gap: 20px; margin-top: 12px; flex-wrap: wrap; }
+.color-field { display: flex; flex-direction: column; gap: 4px; }
+.color-field label { font-size: 0.78rem; color: #666; }
+.color-field input[type=color] { width: 48px; height: 32px; border: none; border-radius: 6px; cursor: pointer; }
 
 .danger-zone {
   margin-top: 40px;
