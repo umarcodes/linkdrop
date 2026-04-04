@@ -105,6 +105,16 @@
                 <input v-model="editForm.title" class="edit-title-input" placeholder="Title" required aria-label="Link title" />
               </div>
               <input v-model="editForm.url" type="text" placeholder="example.com" required class="edit-url-input" aria-label="Link URL" />
+              <div class="schedule-row">
+                <div class="schedule-field">
+                  <label>Show from</label>
+                  <input v-model="editForm.starts_at" type="datetime-local" class="edit-url-input" aria-label="Start date" />
+                </div>
+                <div class="schedule-field">
+                  <label>Show until</label>
+                  <input v-model="editForm.ends_at" type="datetime-local" class="edit-url-input" aria-label="End date" />
+                </div>
+              </div>
               <div class="edit-actions">
                 <button type="submit" :disabled="editLoading" class="btn-save">
                   <span v-if="editLoading" class="spinner spinner-sm" />
@@ -360,7 +370,13 @@ function autoFillIcon() {
 
 function startEdit(link) {
   editingId.value = link.id
-  editForm.value = { title: link.title, url: link.url, icon: link.icon || '' }
+  editForm.value = {
+    title: link.title,
+    url: link.url,
+    icon: link.icon || '',
+    starts_at: link.starts_at ? link.starts_at.slice(0, 16) : '',
+    ends_at:   link.ends_at   ? link.ends_at.slice(0, 16)   : '',
+  }
 }
 
 function cancelEdit() {
@@ -842,6 +858,9 @@ input:focus { border-color: #7c6af7; }
   width: 100%;
 }
 .edit-title-input:focus, .edit-url-input:focus { border-color: #7c6af7; }
+
+.schedule-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.schedule-field label { display: block; font-size: 0.78rem; color: #666; margin-bottom: 4px; }
 
 .edit-actions { display: flex; gap: 8px; }
 

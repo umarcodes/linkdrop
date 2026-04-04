@@ -19,6 +19,8 @@ class Link extends Model
         'order',
         'is_active',
         'is_pinned',
+        'starts_at',
+        'ends_at',
     ];
 
     protected function casts(): array
@@ -27,6 +29,8 @@ class Link extends Model
             'is_active' => 'boolean',
             'is_pinned' => 'boolean',
             'order' => 'integer',
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
         ];
     }
 
