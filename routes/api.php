@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
@@ -13,6 +14,7 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [PasswordResetController::class, 'sendLink']);
     Route::post('/reset-password', [PasswordResetController::class, 'reset']);
+    Route::post('/verify-email', [EmailVerificationController::class, 'verify']);
 });
 
 Route::get('/p/{username}', [ProfileController::class, 'show']);
@@ -22,6 +24,7 @@ Route::post('/p/{username}/verify/{linkId}', [ProfileController::class, 'verifyL
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/email/send-verification', [EmailVerificationController::class, 'send']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::patch('/profile', [AuthController::class, 'updateProfile']);
     Route::post('/account/delete', [AuthController::class, 'deleteAccount']);

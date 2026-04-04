@@ -30,6 +30,11 @@ const routes = [
     meta: { guest: true },
   },
   {
+    path: '/app/verify-email',
+    name: 'verify-email',
+    component: () => import('../views/VerifyEmail.vue'),
+  },
+  {
     path: '/app/dashboard',
     name: 'dashboard',
     component: () => import('../views/Dashboard.vue'),

@@ -50,6 +50,14 @@
     <!-- Main Panel -->
     <main class="main">
 
+      <!-- Email verification banner -->
+      <div v-if="user && !user.email_verified_at" class="verify-banner">
+        <span>📧 Please verify your email address to unlock all features.</span>
+        <button class="verify-link" :disabled="sendingVerification" @click="sendVerificationEmail">
+          {{ verificationSent ? 'Email sent!' : (sendingVerification ? 'Sending…' : 'Resend verification email') }}
+        </button>
+      </div>
+
       <!-- Links Tab -->
       <div v-if="activeTab === 'links'" class="panel">
         <div class="panel-header">
@@ -425,6 +433,8 @@ const confirmLogout = ref(false)
 const links        = ref([])
 const analytics    = ref({})
 const analyticsDays = ref(7)
+const sendingVerification = ref(false)
+const verificationSent = ref(false)
 const addError     = ref('')
 const deletingId   = ref(null)
 const editingId    = ref(null)
@@ -673,6 +683,18 @@ async function saveProfile() {
   }
 }
 
+async function sendVerificationEmail() {
+  sendingVerification.value = true
+  try {
+    await post('/email/send-verification', {})
+    verificationSent.value = true
+  } catch {
+    toast.error('Failed to send verification email')
+  } finally {
+    sendingVerification.value = false
+  }
+}
+
 onMounted(() => {
   fetchLinks()
   fetchAnalytics()
@@ -825,6 +847,32 @@ h2 { font-size: 1.3rem; font-weight: 600; }
   outline: none;
 }
 .days-select:hover { background: rgba(124,106,247,0.18); }
+
+.verify-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(249,115,22,0.1);
+  border: 1px solid rgba(249,115,22,0.3);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 0.875rem;
+  color: #fdba74;
+  flex-wrap: wrap;
+}
+.verify-link {
+  background: transparent;
+  border: 1px solid rgba(249,115,22,0.4);
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: #fb923c;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.verify-link:hover:not(:disabled) { background: rgba(249,115,22,0.1); }
+.verify-link:disabled { opacity: 0.6; cursor: default; }
 
 /* Add Form */
 .add-form {
