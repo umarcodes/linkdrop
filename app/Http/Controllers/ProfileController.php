@@ -27,7 +27,7 @@ class ProfileController extends Controller
             })
             ->orderByDesc('is_pinned')
             ->orderBy('order')
-            ->get(['id', 'title', 'url', 'icon', 'is_header', 'password']);
+            ->get(['id', 'title', 'url', 'icon', 'og_image', 'is_header', 'password']);
 
         return response()->json([
             'name' => $user->name,

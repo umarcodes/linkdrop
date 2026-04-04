@@ -41,7 +41,8 @@
             :class="{ 'is-copy': isCopyLink(link.url) }"
             @click.prevent="handleLinkClick(link)"
           >
-            <span class="link-icon">{{ link.icon || detectSocialIcon(link.url) || '🔗' }}</span>
+            <img v-if="link.og_image" :src="link.og_image" class="link-og-thumb" :alt="link.title" />
+            <span v-else class="link-icon">{{ link.icon || detectSocialIcon(link.url) || '🔗' }}</span>
             <span class="link-title">{{ link.title }}</span>
             <span class="link-arrow">{{ copiedLinkId === link.id ? '✓' : (link.is_password_protected ? '🔒' : (isCopyLink(link.url) ? '⎘' : '→')) }}</span>
           </a>
@@ -361,6 +362,7 @@ onMounted(fetchProfile)
 }
 
 .link-icon { font-size: 1.3rem; flex-shrink: 0; }
+.link-og-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
 .link-title { flex: 1; font-weight: 500; font-size: 0.95rem; }
 .link-arrow { color: #666; font-size: 1rem; transition: transform 0.15s; }
 .link-item:hover .link-arrow { transform: translateX(4px); color: #7c6af7; }

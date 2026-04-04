@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('links', LinkController::class);
     Route::post('/links/reorder', [LinkController::class, 'reorder']);
+    Route::post('/links/fetch-og', [LinkController::class, 'fetchOg']);
 
     Route::get('/analytics', [AnalyticsController::class, 'index']);
     Route::get('/analytics/export', [AnalyticsController::class, 'export']);
