@@ -176,7 +176,17 @@
       <div v-if="activeTab === 'analytics'" class="panel">
         <div class="panel-header">
           <h2>Analytics</h2>
-          <button class="btn-add" @click="fetchAnalytics" title="Refresh analytics">↻ Refresh</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select v-model="analyticsDays" class="days-select" @change="fetchAnalytics">
+              <option :value="7">Last 7 days</option>
+              <option :value="14">Last 14 days</option>
+              <option :value="30">Last 30 days</option>
+              <option :value="90">Last 90 days</option>
+              <option :value="365">Last year</option>
+            </select>
+            <button class="btn-add" @click="fetchAnalytics" title="Refresh analytics">↻ Refresh</button>
+            <button class="btn-add" title="Export CSV" @click="downloadCsv">↓ Export CSV</button>
+          </div>
         </div>
 
         <div v-if="analyticsLoading" class="loading-state">Loading analytics…</div>
@@ -221,7 +231,19 @@
             </div>
           </div>
 
-          <h3 class="section-title">Last 7 Days</h3>
+          <h3 class="section-title">Top Referrers</h3>
+          <div v-if="(analytics.referrers || []).length === 0" class="empty-state small">No referrer data yet.</div>
+          <div v-else class="bar-chart">
+            <div v-for="ref in analytics.referrers" :key="ref.referrer" class="bar-row">
+              <div class="bar-label" :title="ref.referrer">{{ ref.referrer }}</div>
+              <div class="bar-track">
+                <div class="bar-fill" :style="{ width: referrerBarWidth(ref.count) }" />
+              </div>
+              <div class="bar-count">{{ ref.count }}</div>
+            </div>
+          </div>
+
+          <h3 class="section-title">Last {{ analyticsDays }} Days</h3>
           <div v-if="(analytics.daily_clicks || []).length === 0" class="empty-state small">No data for the last 7 days.</div>
           <div v-else class="bar-chart">
             <div v-for="day in analytics.daily_clicks" :key="day.date" class="bar-row">
@@ -337,6 +359,7 @@ const showAddForm  = ref(false)
 const confirmLogout = ref(false)
 const links        = ref([])
 const analytics    = ref({})
+const analyticsDays = ref(7)
 const addError     = ref('')
 const deletingId   = ref(null)
 const editingId    = ref(null)
@@ -371,6 +394,11 @@ function deviceBarWidth(count) { return `${Math.round((count / (totalDeviceClick
 
 function barWidth(count) { return `${Math.round((count / maxClicks.value) * 100)}%` }
 function dayBarWidth(count) { return `${Math.round((count / maxDay.value) * 100)}%` }
+const maxReferrer = computed(() => {
+  const counts = (analytics.value.referrers || []).map(r => r.count)
+  return counts.length ? Math.max(...counts) : 1
+})
+function referrerBarWidth(count) { return `${Math.round((count / maxReferrer.value) * 100)}%` }
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
@@ -414,7 +442,21 @@ async function fetchLinks() {
 }
 
 async function fetchAnalytics() {
-  analytics.value = await getAnalytics('/analytics')
+  analytics.value = await getAnalytics(`/analytics?days=${analyticsDays.value}`)
+}
+
+async function downloadCsv() {
+  const token = localStorage.getItem('linkdrop_token')
+  const res = await fetch('/api/analytics/export', {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'text/csv' },
+  })
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `analytics-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 async function handleAddLink() {
@@ -680,6 +722,18 @@ h2 { font-size: 1.3rem; font-weight: 600; }
   transition: background 0.2s;
 }
 .btn-add:hover { background: rgba(124,106,247,0.25); }
+
+.days-select {
+  background: rgba(124,106,247,0.10);
+  border: 1px solid rgba(124,106,247,0.3);
+  border-radius: 10px;
+  padding: 7px 12px;
+  color: #c8c8e0;
+  font-size: 0.82rem;
+  cursor: pointer;
+  outline: none;
+}
+.days-select:hover { background: rgba(124,106,247,0.18); }
 
 /* Add Form */
 .add-form {
