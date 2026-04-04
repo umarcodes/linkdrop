@@ -8,6 +8,19 @@ use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
+    public function domainLookup(Request $request): JsonResponse
+    {
+        $host = $request->query('host') ?: $request->getHost();
+
+        $user = User::where('custom_domain', $host)->first();
+
+        if (! $user) {
+            return response()->json(['username' => null], 404);
+        }
+
+        return response()->json(['username' => $user->username]);
+    }
+
     public function show(Request $request, string $username): JsonResponse
     {
         $user = User::where('username', $username)->firstOrFail();

@@ -21,6 +21,7 @@ class User extends Authenticatable
         'avatar',
         'theme',
         'api_key',
+        'custom_domain',
         'badge_available_for_hire',
         'badge_verified',
         'is_admin',
