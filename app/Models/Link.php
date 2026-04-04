@@ -17,6 +17,7 @@ class Link extends Model
         'url',
         'icon',
         'og_image',
+        'utm_params',
         'order',
         'is_active',
         'is_pinned',
@@ -46,6 +47,7 @@ class Link extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'max_clicks' => 'integer',
+            'utm_params' => 'array',
         ];
     }
 

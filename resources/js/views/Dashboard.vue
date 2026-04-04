@@ -169,6 +169,16 @@
                   </button>
                 </div>
                 <img v-if="editForm.og_image" :src="editForm.og_image" class="og-preview-img" alt="Preview" style="max-height:60px;border-radius:6px;margin-top:4px;" />
+                <details class="utm-details">
+                  <summary class="utm-summary">UTM / Affiliate tracking</summary>
+                  <div class="utm-grid">
+                    <input v-model="editForm.utm_params.source" placeholder="utm_source (e.g. newsletter)" class="edit-url-input" />
+                    <input v-model="editForm.utm_params.medium" placeholder="utm_medium (e.g. email)" class="edit-url-input" />
+                    <input v-model="editForm.utm_params.campaign" placeholder="utm_campaign (e.g. spring-sale)" class="edit-url-input" />
+                    <input v-model="editForm.utm_params.term" placeholder="utm_term (optional)" class="edit-url-input" />
+                    <input v-model="editForm.utm_params.content" placeholder="utm_content (optional)" class="edit-url-input" />
+                  </div>
+                </details>
               </template>
               <div class="edit-actions">
                 <button type="submit" :disabled="editLoading" class="btn-save">
@@ -610,7 +620,7 @@ const verificationSent = ref(false)
 const addError     = ref('')
 const deletingId   = ref(null)
 const editingId    = ref(null)
-const editForm     = ref({ title: '', url: '', icon: '' })
+const editForm     = ref({ title: '', url: '', icon: '', utm_params: { source: '', medium: '', campaign: '', term: '', content: '' } })
 
 const draggingId = ref(null)
 const dragOverId = ref(null)
@@ -717,6 +727,7 @@ function startEdit(link) {
         url: link.url,
         icon: link.icon || '',
         og_image: link.og_image || '',
+        utm_params: link.utm_params ? { ...link.utm_params } : { source: '', medium: '', campaign: '', term: '', content: '' },
         starts_at: link.starts_at ? link.starts_at.slice(0, 16) : '',
         ends_at:   link.ends_at   ? link.ends_at.slice(0, 16)   : '',
         password: '',
@@ -1441,6 +1452,11 @@ input:focus { border-color: #7c6af7; }
 
 .schedule-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .schedule-field label { display: block; font-size: 0.78rem; color: #666; margin-bottom: 4px; }
+
+.utm-details { margin-top: 8px; }
+.utm-summary { font-size: 0.78rem; color: #666; cursor: pointer; user-select: none; margin-bottom: 6px; }
+.utm-summary:hover { color: #a090f5; }
+.utm-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 
 .edit-actions { display: flex; gap: 8px; }
 
