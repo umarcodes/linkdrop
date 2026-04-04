@@ -209,6 +209,18 @@
             </div>
           </div>
 
+          <h3 class="section-title">Device Breakdown</h3>
+          <div v-if="totalDeviceClicks === 0" class="empty-state small">No click data yet.</div>
+          <div v-else class="bar-chart">
+            <div v-for="(count, device) in analytics.devices" :key="device" class="bar-row">
+              <div class="bar-label">{{ device }}</div>
+              <div class="bar-track">
+                <div class="bar-fill" :style="{ width: deviceBarWidth(count) }" />
+              </div>
+              <div class="bar-count">{{ count }}</div>
+            </div>
+          </div>
+
           <h3 class="section-title">Last 7 Days</h3>
           <div v-if="(analytics.daily_clicks || []).length === 0" class="empty-state small">No data for the last 7 days.</div>
           <div v-else class="bar-chart">
@@ -353,6 +365,9 @@ const maxDay = computed(() => {
   const counts = (analytics.value.daily_clicks || []).map(d => d.clicks)
   return counts.length ? Math.max(...counts) : 1
 })
+
+const totalDeviceClicks = computed(() => Object.values(analytics.value.devices || {}).reduce((a, b) => a + b, 0))
+function deviceBarWidth(count) { return `${Math.round((count / (totalDeviceClicks.value || 1)) * 100)}%` }
 
 function barWidth(count) { return `${Math.round((count / maxClicks.value) * 100)}%` }
 function dayBarWidth(count) { return `${Math.round((count / maxDay.value) * 100)}%` }
