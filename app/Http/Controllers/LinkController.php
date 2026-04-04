@@ -23,11 +23,14 @@ class LinkController extends Controller
     {
         $request->merge(['url' => $this->normalizeUrl($request->input('url', ''))]);
 
+        $isHeader = (bool) $request->input('is_header', false);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'url' => ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
+            'url' => $isHeader ? ['nullable', 'string'] : ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
             'is_active' => ['boolean'],
+            'is_header' => ['boolean'],
         ]);
 
         $order = $request->user()->links()->max('order') + 1;
@@ -35,7 +38,9 @@ class LinkController extends Controller
         $link = $request->user()->links()->create([
             ...$validated,
             'order' => $order,
+            'url' => $isHeader ? null : ($validated['url'] ?? null),
             'is_active' => $validated['is_active'] ?? true,
+            'is_header' => $isHeader,
         ]);
 
         return response()->json($link, 201);
@@ -53,10 +58,11 @@ class LinkController extends Controller
 
         $validated = $request->validate([
             'title' => ['sometimes', 'string', 'max:255'],
-            'url' => ['sometimes', 'url', 'max:2048', 'regex:#^https?://#i'],
+            'url' => $link->is_header ? ['nullable', 'string'] : ['sometimes', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
             'is_active' => ['sometimes', 'boolean'],
             'is_pinned' => ['sometimes', 'boolean'],
+            'is_header' => ['sometimes', 'boolean'],
             'starts_at' => ['sometimes', 'nullable', 'date'],
             'ends_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:starts_at'],
         ]);

@@ -54,10 +54,28 @@
       <div v-if="activeTab === 'links'" class="panel">
         <div class="panel-header">
           <h2>My Links</h2>
-          <button class="btn-add" @click="showAddForm = !showAddForm">
-            {{ showAddForm ? '✕ Cancel' : '+ Add Link' }}
-          </button>
+          <div style="display:flex;gap:8px">
+            <button class="btn-add" @click="addingHeader = !addingHeader; showAddForm = false">
+              {{ addingHeader ? '✕ Cancel' : '+ Section' }}
+            </button>
+            <button class="btn-add" @click="showAddForm = !showAddForm; addingHeader = false">
+              {{ showAddForm ? '✕ Cancel' : '+ Add Link' }}
+            </button>
+          </div>
         </div>
+
+        <Transition name="slide">
+          <form v-if="addingHeader" class="add-form" @submit.prevent="handleAddHeader">
+            <div class="field">
+              <label>Section Title</label>
+              <input v-model="newHeaderTitle" placeholder="Social Media" required />
+            </div>
+            <button type="submit" :disabled="addLoading" class="btn-primary">
+              <span v-if="addLoading" class="spinner" />
+              <span v-else>Add Section</span>
+            </button>
+          </form>
+        </Transition>
 
         <Transition name="slide">
           <form v-if="showAddForm" class="add-form" @submit.prevent="handleAddLink">
@@ -101,20 +119,22 @@
             <!-- Edit mode -->
             <form v-if="editingId === link.id" class="edit-form" @submit.prevent="saveEdit(link)">
               <div class="edit-row">
-                <input v-model="editForm.icon" class="edit-icon-input" placeholder="🔗" maxlength="10" title="Icon emoji" aria-label="Link icon" />
+                <input v-if="!link.is_header" v-model="editForm.icon" class="edit-icon-input" placeholder="🔗" maxlength="10" title="Icon emoji" aria-label="Link icon" />
                 <input v-model="editForm.title" class="edit-title-input" placeholder="Title" required aria-label="Link title" />
               </div>
-              <input v-model="editForm.url" type="text" placeholder="example.com" required class="edit-url-input" aria-label="Link URL" />
-              <div class="schedule-row">
-                <div class="schedule-field">
-                  <label>Show from</label>
-                  <input v-model="editForm.starts_at" type="datetime-local" class="edit-url-input" aria-label="Start date" />
+              <template v-if="!link.is_header">
+                <input v-model="editForm.url" type="text" placeholder="example.com" required class="edit-url-input" aria-label="Link URL" />
+                <div class="schedule-row">
+                  <div class="schedule-field">
+                    <label>Show from</label>
+                    <input v-model="editForm.starts_at" type="datetime-local" class="edit-url-input" aria-label="Start date" />
+                  </div>
+                  <div class="schedule-field">
+                    <label>Show until</label>
+                    <input v-model="editForm.ends_at" type="datetime-local" class="edit-url-input" aria-label="End date" />
+                  </div>
                 </div>
-                <div class="schedule-field">
-                  <label>Show until</label>
-                  <input v-model="editForm.ends_at" type="datetime-local" class="edit-url-input" aria-label="End date" />
-                </div>
-              </div>
+              </template>
               <div class="edit-actions">
                 <button type="submit" :disabled="editLoading" class="btn-save">
                   <span v-if="editLoading" class="spinner spinner-sm" />
@@ -127,34 +147,43 @@
             <!-- View mode -->
             <template v-else>
               <div class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">⠿</div>
-              <div class="link-icon">{{ link.icon || '🔗' }}</div>
-              <div class="link-info">
-                <div class="link-title">{{ link.title }}</div>
-                <div class="link-url">{{ link.url }}</div>
-              </div>
+              <template v-if="link.is_header">
+                <div class="link-info" style="flex:1">
+                  <div class="link-title" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:#666">— {{ link.title }} —</div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="link-icon">{{ link.icon || '🔗' }}</div>
+                <div class="link-info">
+                  <div class="link-title">{{ link.title }}</div>
+                  <div class="link-url">{{ link.url }}</div>
+                </div>
+              </template>
               <div class="link-actions">
-                <label class="toggle" :title="link.is_active ? 'Deactivate link' : 'Activate link'" :aria-label="link.is_active ? 'Deactivate link' : 'Activate link'">
-                  <input type="checkbox" :checked="link.is_active" @change="toggleActive(link)" />
-                  <span class="toggle-slider" />
-                </label>
+                <template v-if="!link.is_header">
+                  <label class="toggle" :title="link.is_active ? 'Deactivate link' : 'Activate link'" :aria-label="link.is_active ? 'Deactivate link' : 'Activate link'">
+                    <input type="checkbox" :checked="link.is_active" @change="toggleActive(link)" />
+                    <span class="toggle-slider" />
+                  </label>
+                  <button
+                    class="btn-icon"
+                    :title="link.is_pinned ? 'Unpin link' : 'Pin link'"
+                    :aria-label="link.is_pinned ? 'Unpin link' : 'Pin link'"
+                    :class="{ 'btn-pinned': link.is_pinned }"
+                    @click="togglePin(link)"
+                  >📌</button>
+                </template>
                 <button
                   class="btn-icon"
-                  :title="link.is_pinned ? 'Unpin link' : 'Pin link'"
-                  :aria-label="link.is_pinned ? 'Unpin link' : 'Pin link'"
-                  :class="{ 'btn-pinned': link.is_pinned }"
-                  @click="togglePin(link)"
-                >📌</button>
-                <button
-                  class="btn-icon"
-                  title="Edit link"
-                  aria-label="Edit link"
+                  title="Edit"
+                  aria-label="Edit"
                   @click="startEdit(link)"
                 >✏️</button>
                 <button
                   v-if="deletingId !== link.id"
                   class="btn-icon btn-delete"
-                  title="Delete link"
-                  aria-label="Delete link"
+                  title="Delete"
+                  aria-label="Delete"
                   @click="deletingId = link.id"
                 >🗑</button>
                 <template v-else>
@@ -356,6 +385,8 @@ const toast = useToast()
 
 const activeTab    = ref('links')
 const showAddForm  = ref(false)
+const addingHeader = ref(false)
+const newHeaderTitle = ref('')
 const confirmLogout = ref(false)
 const links        = ref([])
 const analytics    = ref({})
@@ -413,13 +444,15 @@ function autoFillIcon() {
 
 function startEdit(link) {
   editingId.value = link.id
-  editForm.value = {
-    title: link.title,
-    url: link.url,
-    icon: link.icon || '',
-    starts_at: link.starts_at ? link.starts_at.slice(0, 16) : '',
-    ends_at:   link.ends_at   ? link.ends_at.slice(0, 16)   : '',
-  }
+  editForm.value = link.is_header
+    ? { title: link.title }
+    : {
+        title: link.title,
+        url: link.url,
+        icon: link.icon || '',
+        starts_at: link.starts_at ? link.starts_at.slice(0, 16) : '',
+        ends_at:   link.ends_at   ? link.ends_at.slice(0, 16)   : '',
+      }
 }
 
 function cancelEdit() {
@@ -471,6 +504,18 @@ async function handleAddLink() {
     addError.value = typeof addErr.value === 'string'
       ? addErr.value
       : Object.values(addErr.value || {}).flat().join(' ')
+  }
+}
+
+async function handleAddHeader() {
+  try {
+    const link = await post('/links', { title: newHeaderTitle.value, is_header: true })
+    links.value.push(link)
+    newHeaderTitle.value = ''
+    addingHeader.value = false
+    toast.success('Section added')
+  } catch (e) {
+    toast.error('Failed to add section')
   }
 }
 

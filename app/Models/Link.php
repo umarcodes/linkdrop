@@ -19,6 +19,7 @@ class Link extends Model
         'order',
         'is_active',
         'is_pinned',
+        'is_header',
         'starts_at',
         'ends_at',
     ];
@@ -28,6 +29,7 @@ class Link extends Model
         return [
             'is_active' => 'boolean',
             'is_pinned' => 'boolean',
+            'is_header' => 'boolean',
             'order' => 'integer',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
