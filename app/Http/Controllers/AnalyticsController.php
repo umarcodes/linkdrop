@@ -32,11 +32,22 @@ class AnalyticsController extends Controller
 
         $totalViews = ProfileView::where('user_id', $user->id)->count();
 
+        $clicks = LinkClick::whereIn('link_id', $linkIds)->pluck('user_agent');
+        $devices = ['Mobile' => 0, 'Desktop' => 0];
+        foreach ($clicks as $ua) {
+            if (preg_match('/Mobile|Android|iPhone|iPad/i', (string) $ua)) {
+                $devices['Mobile']++;
+            } else {
+                $devices['Desktop']++;
+            }
+        }
+
         return response()->json([
             'total_clicks' => $totalClicks,
             'total_views' => $totalViews,
             'per_link' => $perLink,
             'daily_clicks' => $dailyClicks,
+            'devices' => $devices,
         ]);
     }
 }
