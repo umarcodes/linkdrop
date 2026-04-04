@@ -32,11 +32,12 @@
           target="_blank"
           rel="noopener noreferrer"
           class="link-item"
+          :class="{ 'is-copy': isCopyLink(link.url) }"
           @click.prevent="handleLinkClick(link)"
         >
           <span class="link-icon">{{ link.icon || detectSocialIcon(link.url) || '🔗' }}</span>
           <span class="link-title">{{ link.title }}</span>
-          <span class="link-arrow">→</span>
+          <span class="link-arrow">{{ copiedLinkId === link.id ? '✓' : (isCopyLink(link.url) ? '⎘' : '→') }}</span>
         </a>
       </div>
 
@@ -66,7 +67,8 @@ const { get, post } = useApi()
 const profile  = ref(null)
 const loading  = ref(true)
 const notFound = ref(false)
-const copied   = ref(false)
+const copied      = ref(false)
+const copiedLinkId = ref(null)
 
 const profileUrl = computed(() => window.location.href)
 const qrUrl = computed(() =>
@@ -96,8 +98,19 @@ async function fetchProfile() {
   }
 }
 
+function isCopyLink(url) {
+  return /^(mailto:|tel:|sms:)/i.test(url) || /^copy:/i.test(url)
+}
+
 async function handleLinkClick(link) {
-  window.open(link.url, '_blank', 'noopener,noreferrer')
+  if (isCopyLink(link.url)) {
+    const text = link.url.replace(/^copy:/i, '')
+    await navigator.clipboard.writeText(text)
+    copiedLinkId.value = link.id
+    setTimeout(() => { copiedLinkId.value = null }, 2000)
+  } else {
+    window.open(link.url, '_blank', 'noopener,noreferrer')
+  }
   try {
     await post(`/p/${route.params.username}/click/${link.id}`)
   } catch {}
@@ -233,6 +246,7 @@ onMounted(fetchProfile)
 .link-title { flex: 1; font-weight: 500; font-size: 0.95rem; }
 .link-arrow { color: #666; font-size: 1rem; transition: transform 0.15s; }
 .link-item:hover .link-arrow { transform: translateX(4px); color: #7c6af7; }
+.link-item.is-copy .link-arrow { font-size: 1.1rem; }
 
 .profile-actions { display: flex; gap: 10px; margin-bottom: 24px; }
 
