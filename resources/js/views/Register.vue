@@ -34,7 +34,7 @@
 
         <div v-if="form.username" class="url-preview">
           <span class="url-preview-label">Your link:</span>
-          <span class="url-pill">linkdrop.app/{{ form.username }}</span>
+          <span class="url-pill">{{ host }}/{{ form.username }}</span>
         </div>
 
         <div class="field">
@@ -80,6 +80,8 @@ const form = ref({
   password: '',
   password_confirmation: '',
 })
+
+const host = window.location.host
 
 const errorMsg = computed(() => {
   if (!error.value) return ''
