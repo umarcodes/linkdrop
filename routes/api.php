@@ -8,6 +8,7 @@ use App\Http\Controllers\LinkController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicApiController;
+use App\Http\Controllers\WaitlistController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,7 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('/forgot-password', [PasswordResetController::class, 'sendLink']);
     Route::post('/reset-password', [PasswordResetController::class, 'reset']);
     Route::post('/verify-email', [EmailVerificationController::class, 'verify']);
+    Route::post('/waitlist', [WaitlistController::class, 'join']);
 });
 
 Route::get('/p/{username}', [ProfileController::class, 'show']);
@@ -55,6 +57,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/users', [AdminController::class, 'users']);
     Route::patch('/users/{user}', [AdminController::class, 'updateUser']);
     Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
+
+    Route::get('/waitlist', [WaitlistController::class, 'list']);
+    Route::post('/waitlist/invite', [WaitlistController::class, 'invite']);
 });
 
 // Public API (API key auth)

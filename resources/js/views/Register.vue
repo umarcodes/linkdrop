@@ -7,69 +7,108 @@
       <div class="logo">
         <span class="logo-text">LinkDrop</span>
       </div>
-      <h1>Create account</h1>
-      <p class="subtitle">Start sharing your links</p>
 
-      <form @submit.prevent="handleRegister">
-        <div class="grid-2">
+      <!-- Waitlist view: shown when registration is closed and no invite code -->
+      <template v-if="registrationClosed && !hasInvite">
+        <h1>Join the waitlist</h1>
+        <p class="subtitle">We'll let you know when a spot opens up</p>
+
+        <div v-if="waitlistSuccess" class="success-box">
+          You're on the list! We'll email you when your invite is ready.
+        </div>
+
+        <form v-else @submit.prevent="handleWaitlist">
           <div class="field">
-            <label>Name</label>
-            <input v-model="form.name" type="text" placeholder="Jane Doe" required />
+            <label>Email</label>
+            <input v-model="waitlistEmail" type="email" placeholder="you@example.com" required />
           </div>
-          <div class="field">
-            <label>Username</label>
-            <div class="input-prefix-wrap">
-              <span class="prefix">@</span>
-              <input
-                v-model="form.username"
-                type="text"
-                placeholder="janedoe"
-                class="prefixed"
-                required
-              />
+
+          <div v-if="waitlistError" class="error-box">{{ waitlistError }}</div>
+
+          <button type="submit" :disabled="waitlistLoading" class="btn-primary">
+            <span v-if="waitlistLoading" class="spinner" />
+            <span v-else>Join waitlist</span>
+          </button>
+        </form>
+
+        <p class="footer-link">
+          Already have an account? <RouterLink to="/app/login">Sign in</RouterLink>
+        </p>
+      </template>
+
+      <!-- Normal registration form -->
+      <template v-else>
+        <h1>Create account</h1>
+        <p class="subtitle">Start sharing your links</p>
+
+        <div v-if="hasInvite" class="invite-banner">
+          You have an invite — fill in your details below.
+        </div>
+
+        <form @submit.prevent="handleRegister">
+          <div class="grid-2">
+            <div class="field">
+              <label>Name</label>
+              <input v-model="form.name" type="text" placeholder="Jane Doe" required />
             </div>
-            <span class="field-hint">letters, numbers, _ and - only</span>
+            <div class="field">
+              <label>Username</label>
+              <div class="input-prefix-wrap">
+                <span class="prefix">@</span>
+                <input
+                  v-model="form.username"
+                  type="text"
+                  placeholder="janedoe"
+                  class="prefixed"
+                  required
+                />
+              </div>
+              <span class="field-hint">letters, numbers, _ and - only</span>
+            </div>
           </div>
-        </div>
 
-        <div v-if="form.username" class="url-preview">
-          <span class="url-preview-label">Your link:</span>
-          <span class="url-pill">{{ host }}/{{ form.username }}</span>
-        </div>
+          <div v-if="form.username" class="url-preview">
+            <span class="url-preview-label">Your link:</span>
+            <span class="url-pill">{{ host }}/{{ form.username }}</span>
+          </div>
 
-        <div class="field">
-          <label>Email</label>
-          <input v-model="form.email" type="email" placeholder="you@example.com" required />
-        </div>
-        <div class="field">
-          <label>Password</label>
-          <input v-model="form.password" type="password" placeholder="Min 8 characters" required />
-        </div>
-        <div class="field">
-          <label>Confirm Password</label>
-          <input v-model="form.password_confirmation" type="password" placeholder="••••••••" required />
-        </div>
+          <div class="field">
+            <label>Email</label>
+            <input v-model="form.email" type="email" placeholder="you@example.com" required />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input v-model="form.password" type="password" placeholder="Min 8 characters" required />
+          </div>
+          <div class="field">
+            <label>Confirm Password</label>
+            <input v-model="form.password_confirmation" type="password" placeholder="••••••••" required />
+          </div>
 
-        <div v-if="errorMsg" class="error-box">{{ errorMsg }}</div>
+          <input v-model="form.invite_code" type="hidden" />
 
-        <button type="submit" :disabled="loading" class="btn-primary">
-          <span v-if="loading" class="spinner" />
-          <span v-else>Create account</span>
-        </button>
-      </form>
+          <div v-if="errorMsg" class="error-box">{{ errorMsg }}</div>
 
-      <p class="footer-link">
-        Already have an account? <RouterLink to="/app/login">Sign in</RouterLink>
-      </p>
+          <button type="submit" :disabled="loading" class="btn-primary">
+            <span v-if="loading" class="spinner" />
+            <span v-else>Create account</span>
+          </button>
+        </form>
+
+        <p class="footer-link">
+          Already have an account? <RouterLink to="/app/login">Sign in</RouterLink>
+        </p>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../stores/auth'
 
+const route = useRoute()
 const router = useRouter()
 const { register, loading, error } = useAuth()
 
@@ -79,12 +118,29 @@ const form = ref({
   email: '',
   password: '',
   password_confirmation: '',
+  invite_code: '',
+})
+
+const registrationClosed = ref(false)
+const hasInvite = ref(false)
+
+const waitlistEmail = ref('')
+const waitlistLoading = ref(false)
+const waitlistError = ref('')
+const waitlistSuccess = ref(false)
+
+onMounted(() => {
+  if (route.query.invite) {
+    form.value.invite_code = route.query.invite
+    hasInvite.value = true
+  }
 })
 
 const host = window.location.host
 
 const errorMsg = computed(() => {
   if (!error.value) return ''
+  if (error.value === 'Registration is currently closed.') return ''
   if (typeof error.value === 'string') return error.value
   return Object.values(error.value).flat().join(' ')
 })
@@ -93,7 +149,33 @@ async function handleRegister() {
   try {
     await register(form.value)
     router.push({ name: 'dashboard' })
-  } catch {}
+  } catch {
+    if (error.value === 'Registration is currently closed.') {
+      registrationClosed.value = true
+    }
+  }
+}
+
+async function handleWaitlist() {
+  waitlistLoading.value = true
+  waitlistError.value = ''
+  try {
+    const res = await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ email: waitlistEmail.value }),
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      waitlistError.value = data.message || 'Something went wrong.'
+    } else {
+      waitlistSuccess.value = true
+    }
+  } catch {
+    waitlistError.value = 'Network error. Please try again.'
+  } finally {
+    waitlistLoading.value = false
+  }
 }
 </script>
 
@@ -237,6 +319,28 @@ input.prefixed:focus { border-color: transparent; }
   color: #f87171;
   font-size: 0.85rem;
   margin-bottom: 16px;
+}
+
+.success-box {
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #34d399;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.invite-banner {
+  background: rgba(124, 106, 247, 0.1);
+  border: 1px solid rgba(124, 106, 247, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #a090f5;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 .btn-primary {
