@@ -88,6 +88,11 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'bio' => ['nullable', 'string', 'max:500'],
+            'theme' => ['nullable', 'array'],
+            'theme.accent' => ['nullable', 'string', 'max:20'],
+            'theme.bg' => ['nullable', 'string', 'max:20'],
+            'theme.card' => ['nullable', 'string', 'max:20'],
+            'theme.text' => ['nullable', 'string', 'max:20'],
         ]);
 
         $request->user()->update($validated);

@@ -198,12 +198,27 @@ function applyProfileMeta(p) {
   setMeta('twitter:title', title)
   setMeta('twitter:description', desc)
   if (image) { setMeta('twitter:image', image) }
+
+  if (p.theme) {
+    const root = document.documentElement
+    if (p.theme.accent) { root.style.setProperty('--p-accent', p.theme.accent) }
+    if (p.theme.bg)     { root.style.setProperty('--p-bg', p.theme.bg) }
+    if (p.theme.card)   { root.style.setProperty('--p-card', p.theme.card) }
+    if (p.theme.text)   { root.style.setProperty('--p-text', p.theme.text) }
+  }
 }
 
 onMounted(fetchProfile)
 </script>
 
 <style scoped>
+:root {
+  --p-accent: #7c6af7;
+  --p-bg: transparent;
+  --p-card: #111118;
+  --p-text: #e8e8f0;
+}
+
 .profile-bg {
   min-height: 100vh;
   display: flex;
@@ -321,17 +336,17 @@ onMounted(fetchProfile)
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #111118;
+  background: var(--p-card, #111118);
   border: 1px solid #1e1e2e;
   border-radius: 14px;
   padding: 16px 18px;
   text-decoration: none;
-  color: #e8e8f0;
+  color: var(--p-text, #e8e8f0);
   transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
 }
 
 .link-item:hover {
-  border-color: #7c6af7;
+  border-color: var(--p-accent, #7c6af7);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(124,106,247,0.15);
 }
