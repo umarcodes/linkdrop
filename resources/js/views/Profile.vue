@@ -91,6 +91,7 @@ async function fetchProfile() {
   loading.value = true
   try {
     profile.value = await get(`/p/${route.params.username}`)
+    applyProfileMeta(profile.value)
   } catch {
     notFound.value = true
   } finally {
@@ -114,6 +115,35 @@ async function handleLinkClick(link) {
   try {
     await post(`/p/${route.params.username}/click/${link.id}`)
   } catch {}
+}
+
+function setMeta(name, content) {
+  let el = document.querySelector(`meta[name="${name}"]`) || document.querySelector(`meta[property="${name}"]`)
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute(name.startsWith('og:') ? 'property' : 'name', name)
+    document.head.appendChild(el)
+  }
+  el.setAttribute('content', content)
+}
+
+function applyProfileMeta(p) {
+  const title = `${p.name} — LinkDrop`
+  const desc  = p.bio || `Check out ${p.name}'s links on LinkDrop.`
+  const url   = window.location.href
+  const image = p.avatar || ''
+
+  document.title = title
+  setMeta('description', desc)
+  setMeta('og:title', title)
+  setMeta('og:description', desc)
+  setMeta('og:url', url)
+  setMeta('og:type', 'profile')
+  if (image) { setMeta('og:image', image) }
+  setMeta('twitter:card', 'summary')
+  setMeta('twitter:title', title)
+  setMeta('twitter:description', desc)
+  if (image) { setMeta('twitter:image', image) }
 }
 
 onMounted(fetchProfile)
