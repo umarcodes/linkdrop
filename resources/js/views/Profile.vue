@@ -24,6 +24,11 @@
       <p class="profile-handle">@{{ profile.username }}</p>
       <p v-if="profile.bio" class="profile-bio">{{ profile.bio }}</p>
 
+      <div class="profile-badges">
+        <span v-if="profile.badge_verified" class="badge badge-verified" title="Verified account">✓ Verified</span>
+        <span v-if="profile.badge_available_for_hire" class="badge badge-hire" title="Available for hire">💼 Available for hire</span>
+      </div>
+
       <div class="links-list">
         <template v-for="link in profile.links" :key="link.id">
           <div v-if="link.is_header" class="link-section-header">{{ link.title }}</div>
@@ -317,7 +322,11 @@ onMounted(fetchProfile)
 .avatar-img { object-fit: cover; background: none; }
 
 .profile-name { font-size: 1.5rem; font-weight: 700; color: #e8e8f0; margin-bottom: 4px; }
-.profile-handle { color: #666; font-size: 0.9rem; margin-bottom: 12px; }
+.profile-handle { color: #666; font-size: 0.9rem; margin-bottom: 6px; }
+.profile-badges { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
+.badge { font-size: 0.72rem; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+.badge-verified { background: rgba(124,106,247,0.15); color: #7c6af7; border: 1px solid rgba(124,106,247,0.3); }
+.badge-hire { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
 .profile-bio { color: #a0a0b0; font-size: 0.9rem; text-align: center; max-width: 320px; margin-bottom: 24px; line-height: 1.5; }
 
 .links-list { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }

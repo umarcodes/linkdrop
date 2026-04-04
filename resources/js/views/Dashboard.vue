@@ -312,6 +312,14 @@
           </div>
 
           <div class="field">
+            <label>Badges</label>
+            <label class="badge-toggle">
+              <input type="checkbox" v-model="profileForm.badge_available_for_hire" />
+              <span>Available for hire</span>
+            </label>
+          </div>
+
+          <div class="field">
             <label>Theme</label>
             <div class="theme-presets">
               <button
@@ -782,7 +790,7 @@ onMounted(() => {
   fetchLinks()
   fetchAnalytics()
   fetchWebhooks()
-  profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '', theme: user.value?.theme || {} }
+  profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '', theme: user.value?.theme || {}, badge_available_for_hire: user.value?.badge_available_for_hire || false }
 })
 </script>
 
@@ -1194,6 +1202,9 @@ input:focus { border-color: #7c6af7; }
 .webhook-url { flex: 1; font-size: 0.82rem; color: #a0a0b0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .webhook-event { font-size: 0.72rem; color: #555; white-space: nowrap; }
 .webhook-form { display: flex; flex-direction: column; }
+
+.badge-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.875rem; color: #a0a0b0; }
+.badge-toggle input { width: 16px; height: 16px; accent-color: #7c6af7; cursor: pointer; }
 
 .api-key-value {
   background: #0d0d15;
