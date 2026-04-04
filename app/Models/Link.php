@@ -23,6 +23,7 @@ class Link extends Model
         'starts_at',
         'ends_at',
         'password',
+        'max_clicks',
     ];
 
     protected $hidden = ['password'];
@@ -43,6 +44,7 @@ class Link extends Model
             'order' => 'integer',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'max_clicks' => 'integer',
         ];
     }
 
