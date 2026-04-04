@@ -7,6 +7,7 @@ use App\Http\Controllers\LinkController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicApiController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -40,6 +41,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // API key management
     Route::post('/api-key/generate', [PublicApiController::class, 'generateKey']);
     Route::post('/api-key/revoke', [PublicApiController::class, 'revokeKey']);
+
+    // Webhooks
+    Route::get('/webhooks', [WebhookController::class, 'index']);
+    Route::post('/webhooks', [WebhookController::class, 'store']);
+    Route::delete('/webhooks/{webhook}', [WebhookController::class, 'destroy']);
 });
 
 // Public API (API key auth)

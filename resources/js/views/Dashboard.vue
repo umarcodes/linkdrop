@@ -362,6 +362,26 @@
           </div>
         </div>
 
+        <div class="api-key-section">
+          <h3 class="section-title" style="margin-bottom:8px">Webhooks</h3>
+          <p style="font-size:0.82rem;color:#666;margin-bottom:12px">Receive an HTTP POST when a link is clicked. Optionally use a secret to verify the signature.</p>
+
+          <div class="webhook-list">
+            <div v-for="wh in webhooks" :key="wh.id" class="webhook-row">
+              <div class="webhook-url">{{ wh.url }}</div>
+              <div class="webhook-event">{{ wh.event }}</div>
+              <button class="btn-icon btn-delete" @click="deleteWebhook(wh.id)">🗑</button>
+            </div>
+            <div v-if="webhooks.length === 0" class="empty-state small">No webhooks yet.</div>
+          </div>
+
+          <form class="webhook-form" @submit.prevent="addWebhook">
+            <input v-model="newWebhook.url" type="text" placeholder="https://yoursite.com/webhook" required class="edit-url-input" />
+            <input v-model="newWebhook.secret" type="text" placeholder="Secret (optional)" class="edit-url-input" style="margin-top:6px" />
+            <button type="submit" class="btn-add" style="margin-top:8px">+ Add Webhook</button>
+          </form>
+        </div>
+
         <div class="danger-zone">
           <h3 class="danger-title">Danger Zone</h3>
           <p class="danger-desc">Permanently delete your account and all your links. This cannot be undone.</p>
@@ -434,6 +454,7 @@ const { user, logout, updateAvatar } = useAuth()
 const { post, put, del, loading: addLoading, error: addErr } = useApi()
 const { get: getLinks, loading: linksLoading } = useApi()
 const { get: getAnalytics, loading: analyticsLoading } = useApi()
+const { get: getWebhooks, post: postWebhook, del: delWebhook } = useApi()
 const { put: putEdit, loading: editLoading } = useApi()
 const { patch: patchProfile, loading: profileLoading } = useApi()
 const toast = useToast()
@@ -457,6 +478,8 @@ const draggingId = ref(null)
 const dragOverId = ref(null)
 
 const profileForm = ref({ name: '', bio: '', theme: {} })
+const webhooks = ref([])
+const newWebhook = ref({ url: '', secret: '' })
 const showCustomTheme = ref(false)
 
 const themePresets = [
@@ -696,6 +719,31 @@ async function saveProfile() {
   }
 }
 
+async function fetchWebhooks() {
+  webhooks.value = await getWebhooks('/webhooks')
+}
+
+async function addWebhook() {
+  try {
+    const wh = await postWebhook('/webhooks', newWebhook.value)
+    webhooks.value.push(wh)
+    newWebhook.value = { url: '', secret: '' }
+    toast.success('Webhook added')
+  } catch {
+    toast.error('Failed to add webhook')
+  }
+}
+
+async function deleteWebhook(id) {
+  try {
+    await delWebhook(`/webhooks/${id}`)
+    webhooks.value = webhooks.value.filter(w => w.id !== id)
+    toast.success('Webhook deleted')
+  } catch {
+    toast.error('Failed to delete webhook')
+  }
+}
+
 async function generateApiKey() {
   try {
     const res = await post('/api-key/generate', {})
@@ -733,6 +781,7 @@ async function sendVerificationEmail() {
 onMounted(() => {
   fetchLinks()
   fetchAnalytics()
+  fetchWebhooks()
   profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '', theme: user.value?.theme || {} }
 })
 </script>
@@ -1140,6 +1189,12 @@ input:focus { border-color: #7c6af7; }
   max-width: 480px;
 }
 .api-key-display { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.webhook-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.webhook-row { display: flex; align-items: center; gap: 10px; background: #0d0d15; border: 1px solid #2a2a3a; border-radius: 8px; padding: 8px 12px; }
+.webhook-url { flex: 1; font-size: 0.82rem; color: #a0a0b0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.webhook-event { font-size: 0.72rem; color: #555; white-space: nowrap; }
+.webhook-form { display: flex; flex-direction: column; }
+
 .api-key-value {
   background: #0d0d15;
   border: 1px solid #2a2a3a;

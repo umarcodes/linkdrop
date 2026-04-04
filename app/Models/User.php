@@ -46,4 +46,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ProfileView::class);
     }
+
+    public function webhooks(): HasMany
+    {
+        return $this->hasMany(Webhook::class);
+    }
 }
