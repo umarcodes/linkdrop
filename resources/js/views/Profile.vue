@@ -40,6 +40,13 @@
         </a>
       </div>
 
+      <div class="profile-actions">
+        <button class="btn-share" @click="shareProfile" title="Share profile">
+          {{ copied ? '✓ Copied!' : '↑ Share' }}
+        </button>
+        <a :href="qrUrl" target="_blank" class="btn-qr" title="Download QR code">⬛ QR Code</a>
+      </div>
+
       <div class="made-with">
         Made with <span class="brand">LinkDrop</span>
       </div>
@@ -48,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { detectSocialIcon } from '../composables/useSocialIcon'
@@ -59,6 +66,22 @@ const { get, post } = useApi()
 const profile  = ref(null)
 const loading  = ref(true)
 const notFound = ref(false)
+const copied   = ref(false)
+
+const profileUrl = computed(() => window.location.href)
+const qrUrl = computed(() =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(profileUrl.value)}`
+)
+
+async function shareProfile() {
+  if (navigator.share) {
+    await navigator.share({ title: profile.value?.name, url: profileUrl.value })
+  } else {
+    await navigator.clipboard.writeText(profileUrl.value)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  }
+}
 
 const initial = computed(() => profile.value?.name?.[0]?.toUpperCase() || '?')
 
@@ -210,6 +233,23 @@ onMounted(fetchProfile)
 .link-title { flex: 1; font-weight: 500; font-size: 0.95rem; }
 .link-arrow { color: #666; font-size: 1rem; transition: transform 0.15s; }
 .link-item:hover .link-arrow { transform: translateX(4px); color: #7c6af7; }
+
+.profile-actions { display: flex; gap: 10px; margin-bottom: 24px; }
+
+.btn-share, .btn-qr {
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+  border: 1px solid rgba(124,106,247,0.3);
+  background: rgba(124,106,247,0.1);
+  color: #7c6af7;
+  font-family: inherit;
+}
+.btn-share:hover, .btn-qr:hover { background: rgba(124,106,247,0.2); }
 
 .made-with { font-size: 0.78rem; color: #444; }
 .brand { color: #7c6af7; font-weight: 600; }
