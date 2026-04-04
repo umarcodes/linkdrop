@@ -3,15 +3,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    name: 'home',
-    // On custom domains the root shows the profile; on the main domain redirect to dashboard
-    component: () => import('../views/Profile.vue'),
     beforeEnter: () => {
-      const appHost = import.meta.env.VITE_APP_HOST || 'localhost'
-      if (window.location.hostname === appHost) {
+      // On the main app domain, redirect to dashboard.
+      // On a custom domain, fall through to render the profile via domain-lookup.
+      const appHost = import.meta.env.VITE_APP_HOST
+      if (!appHost || window.location.hostname === appHost) {
         return '/app/dashboard'
       }
     },
+    component: () => import('../views/Profile.vue'),
   },
   {
     path: '/app/login',
