@@ -16,7 +16,8 @@
 
     <div v-else-if="profile" class="profile-card">
       <div class="avatar-wrap">
-        <div class="avatar">{{ initial }}</div>
+        <img v-if="profile.avatar" :src="profile.avatar" class="avatar avatar-img" :alt="profile.name" />
+        <div v-else class="avatar">{{ initial }}</div>
       </div>
 
       <h1 class="profile-name">{{ profile.name }}</h1>
@@ -33,7 +34,7 @@
           class="link-item"
           @click.prevent="handleLinkClick(link)"
         >
-          <span class="link-icon">{{ link.icon || '🔗' }}</span>
+          <span class="link-icon">{{ link.icon || detectSocialIcon(link.url) || '🔗' }}</span>
           <span class="link-title">{{ link.title }}</span>
           <span class="link-arrow">→</span>
         </a>
@@ -50,6 +51,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { detectSocialIcon } from '../composables/useSocialIcon'
 
 const route = useRoute()
 const { get, post } = useApi()
@@ -176,6 +178,8 @@ onMounted(fetchProfile)
   font-size: 2rem; font-weight: 700;
   position: relative;
 }
+
+.avatar-img { object-fit: cover; background: none; }
 
 .profile-name { font-size: 1.5rem; font-weight: 700; color: #e8e8f0; margin-bottom: 4px; }
 .profile-handle { color: #666; font-size: 0.9rem; margin-bottom: 12px; }
