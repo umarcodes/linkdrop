@@ -117,6 +117,7 @@ class AuthController extends Controller
             'theme.bg' => ['nullable', 'string', 'max:20'],
             'theme.card' => ['nullable', 'string', 'max:20'],
             'theme.text' => ['nullable', 'string', 'max:20'],
+            'badge_available_for_hire' => ['sometimes', 'boolean'],
         ]);
 
         $request->user()->update($validated);

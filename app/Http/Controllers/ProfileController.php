@@ -35,6 +35,8 @@ class ProfileController extends Controller
             'bio' => $user->bio,
             'avatar' => $user->avatar,
             'theme' => $user->theme,
+            'badge_available_for_hire' => $user->badge_available_for_hire,
+            'badge_verified' => $user->badge_verified,
             'links' => $links,
         ]);
     }

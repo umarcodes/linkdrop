@@ -21,6 +21,8 @@ class User extends Authenticatable
         'avatar',
         'theme',
         'api_key',
+        'badge_available_for_hire',
+        'badge_verified',
     ];
 
     protected $hidden = [
@@ -34,6 +36,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'theme' => 'array',
+            'badge_available_for_hire' => 'boolean',
+            'badge_verified' => 'boolean',
         ];
     }
 
