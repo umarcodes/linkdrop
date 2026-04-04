@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LinkClick;
+use App\Models\ProfileView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,9 +30,12 @@ class AnalyticsController extends Controller
             ->orderBy('date')
             ->get();
 
+        $totalViews = ProfileView::where('user_id', $user->id)->count();
+
         return response()->json([
             'total_clicks' => $totalClicks,
-            'per_link'     => $perLink,
+            'total_views' => $totalViews,
+            'per_link' => $perLink,
             'daily_clicks' => $dailyClicks,
         ]);
     }
