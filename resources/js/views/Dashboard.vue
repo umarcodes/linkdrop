@@ -244,6 +244,10 @@
               <div class="stat-value">{{ activeLinks.length }}</div>
               <div class="stat-label">Active Links</div>
             </div>
+            <div class="stat-card">
+              <div class="stat-value">{{ overallCtr }}%</div>
+              <div class="stat-label">Overall CTR</div>
+            </div>
           </div>
 
           <h3 class="section-title">Clicks per Link</h3>
@@ -255,6 +259,7 @@
                 <div class="bar-fill" :style="{ width: barWidth(item.clicks_count) }" />
               </div>
               <div class="bar-count">{{ item.clicks_count }}</div>
+              <div class="bar-ctr" :title="`CTR: ${ctr(item.clicks_count)}%`">{{ ctr(item.clicks_count) }}%</div>
             </div>
           </div>
 
@@ -528,6 +533,13 @@ const maxReferrer = computed(() => {
   return counts.length ? Math.max(...counts) : 1
 })
 function referrerBarWidth(count) { return `${Math.round((count / maxReferrer.value) * 100)}%` }
+
+function ctr(clicks) {
+  const views = analytics.value.total_views || 0
+  if (!views) { return '0.0' }
+  return ((clicks / views) * 100).toFixed(1)
+}
+const overallCtr = computed(() => ctr(analytics.value.total_clicks || 0))
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
@@ -1304,6 +1316,7 @@ input:focus { border-color: #7c6af7; }
 .bar-track { flex: 1; background: #1e1e2e; border-radius: 4px; height: 8px; overflow: hidden; }
 .bar-fill { height: 100%; background: linear-gradient(135deg, #7c6af7, #e96af5); border-radius: 4px; transition: width 0.5s ease; }
 .bar-count { font-size: 0.82rem; color: #666; width: 28px; text-align: right; flex-shrink: 0; }
+.bar-ctr { font-size: 0.72rem; color: #555; width: 40px; text-align: right; flex-shrink: 0; }
 
 /* Phone Preview */
 .preview-panel {
