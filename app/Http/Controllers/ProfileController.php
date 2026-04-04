@@ -76,6 +76,31 @@ class ProfileController extends Controller
             'referrer' => $referrer,
         ]);
 
+        $webhooks = $user->webhooks()->where('event', 'link.clicked')->where('is_active', true)->get();
+
+        $payload = json_encode([
+            'event' => 'link.clicked',
+            'link' => ['id' => $link->id, 'title' => $link->title, 'url' => $link->url],
+            'ip' => $request->ip(),
+            'referrer' => $referrer,
+            'at' => now()->toISOString(),
+        ]);
+
+        foreach ($webhooks as $webhook) {
+            $headers = ['Content-Type: application/json'];
+            if ($webhook->secret) {
+                $headers[] = 'X-Webhook-Signature: '.hash_hmac('sha256', $payload, $webhook->secret);
+            }
+            $ch = curl_init($webhook->url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_exec($ch);
+            curl_close($ch);
+        }
+
         return response()->json(['message' => 'Click tracked']);
     }
 }
