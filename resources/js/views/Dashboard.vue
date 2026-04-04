@@ -70,10 +70,13 @@
         <div class="panel-header">
           <h2>My Links <span class="link-limit-badge">{{ links.length }}/{{ user?.plan === 'pro' || user?.is_admin ? '∞' : 10 }}</span></h2>
           <div style="display:flex;gap:8px">
-            <button class="btn-add" @click="addingHeader = !addingHeader; showAddForm = false">
+            <button class="btn-add" @click="addingHeader = !addingHeader; showAddForm = false; showTipJarForm = false">
               {{ addingHeader ? '✕ Cancel' : '+ Section' }}
             </button>
-            <button class="btn-add" @click="showAddForm = !showAddForm; addingHeader = false">
+            <button class="btn-add" @click="showTipJarForm = !showTipJarForm; showAddForm = false; addingHeader = false">
+              {{ showTipJarForm ? '✕ Cancel' : '💰 Tip Jar' }}
+            </button>
+            <button class="btn-add" @click="showAddForm = !showAddForm; addingHeader = false; showTipJarForm = false">
               {{ showAddForm ? '✕ Cancel' : '+ Add Link' }}
             </button>
           </div>
@@ -88,6 +91,20 @@
             <button type="submit" :disabled="addLoading" class="btn-primary">
               <span v-if="addLoading" class="spinner" />
               <span v-else>Add Section</span>
+            </button>
+          </form>
+        </Transition>
+
+        <Transition name="slide">
+          <form v-if="showTipJarForm" class="add-form" @submit.prevent="handleAddTipJar">
+            <div class="field">
+              <label>Tip Jar Title</label>
+              <input v-model="tipJarForm.title" placeholder="Support my work ☕" required />
+            </div>
+            <div v-if="addError" class="error-box">{{ addError }}</div>
+            <button type="submit" :disabled="addLoading" class="btn-primary">
+              <span v-if="addLoading" class="spinner" />
+              <span v-else>Add Tip Jar</span>
             </button>
           </form>
         </Transition>
@@ -195,6 +212,13 @@
               <template v-if="link.is_header">
                 <div class="link-info" style="flex:1">
                   <div class="link-title" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:#666">— {{ link.title }} —</div>
+                </div>
+              </template>
+              <template v-else-if="link.type === 'tip_jar'">
+                <div class="link-icon">💰</div>
+                <div class="link-info">
+                  <div class="link-title">{{ link.title }}</div>
+                  <div class="link-url" style="color:#a090f5;">Tip Jar widget</div>
                 </div>
               </template>
               <template v-else>
@@ -610,6 +634,8 @@ const toast = useToast()
 const activeTab    = ref('links')
 const showAddForm  = ref(false)
 const addingHeader = ref(false)
+const showTipJarForm = ref(false)
+const tipJarForm = ref({ title: 'Support my work ☕' })
 const newHeaderTitle = ref('')
 const confirmLogout = ref(false)
 const links        = ref([])
@@ -819,6 +845,19 @@ async function handleAddHeader() {
     toast.success('Section added')
   } catch (e) {
     toast.error('Failed to add section')
+  }
+}
+
+async function handleAddTipJar() {
+  addError.value = ''
+  try {
+    const link = await post('/links', { title: tipJarForm.value.title, type: 'tip_jar' })
+    links.value.push(link)
+    tipJarForm.value = { title: 'Support my work ☕' }
+    showTipJarForm.value = false
+    toast.success('Tip Jar added')
+  } catch {
+    addError.value = 'Failed to add Tip Jar'
   }
 }
 

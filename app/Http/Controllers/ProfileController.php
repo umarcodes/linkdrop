@@ -30,6 +30,7 @@ class ProfileController extends Controller
         $links = $user->links()
             ->where(function ($q) {
                 $q->where('is_header', true)
+                    ->orWhere('type', 'tip_jar')
                     ->orWhere(function ($q) {
                         $q->where('is_active', true)
                             ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
@@ -40,7 +41,7 @@ class ProfileController extends Controller
             })
             ->orderByDesc('is_pinned')
             ->orderBy('order')
-            ->get(['id', 'title', 'url', 'icon', 'og_image', 'utm_params', 'is_header', 'password']);
+            ->get(['id', 'title', 'url', 'icon', 'og_image', 'utm_params', 'type', 'is_header', 'password']);
 
         return response()->json([
             'name' => $user->name,

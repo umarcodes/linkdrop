@@ -32,6 +32,24 @@
       <div class="links-list">
         <template v-for="link in profile.links" :key="link.id">
           <div v-if="link.is_header" class="link-section-header">{{ link.title }}</div>
+          <!-- Tip Jar widget -->
+          <div v-else-if="link.type === 'tip_jar'" class="tip-jar">
+            <div class="tip-jar-title">{{ link.title }}</div>
+            <div class="tip-amounts">
+              <a
+                v-for="amount in [1, 3, 5, 10]"
+                :key="amount"
+                class="tip-btn"
+                :href="`https://ko-fi.com/donate?amount=${amount}`"
+                target="_blank"
+                rel="noopener noreferrer"
+                @click="() => { try { post(`/p/${profile.username}/click/${link.id}`) } catch {} }"
+              >
+                ${{ amount }}
+              </a>
+            </div>
+            <p class="tip-note">Powered by Ko-fi. Choose your own amount too!</p>
+          </div>
           <!-- Embeddable player -->
           <div v-else-if="embedUrl(link.url)" class="link-embed">
             <div class="embed-title">{{ link.title }}</div>
@@ -398,6 +416,44 @@ onMounted(fetchProfile)
 .profile-bio { color: #a0a0b0; font-size: 0.9rem; text-align: center; max-width: 320px; margin-bottom: 24px; line-height: 1.5; }
 
 .links-list { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+
+.tip-jar {
+  background: var(--p-card, #111118);
+  border: 1px solid rgba(124,106,247,0.3);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+}
+
+.tip-jar-title {
+  font-weight: 600;
+  color: var(--p-text, #e8e8f0);
+  margin-bottom: 14px;
+  font-size: 1rem;
+}
+
+.tip-amounts {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.tip-btn {
+  background: linear-gradient(135deg, #7c6af7, #e96af5);
+  color: white;
+  border-radius: 24px;
+  padding: 8px 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.tip-btn:hover { opacity: 0.85; }
+
+.tip-note { font-size: 0.72rem; color: #555; margin: 0; }
 
 .link-embed {
   background: var(--p-card, #111118);

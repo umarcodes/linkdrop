@@ -24,11 +24,14 @@ class LinkController extends Controller
         $request->merge(['url' => $this->normalizeUrl($request->input('url', ''))]);
 
         $isHeader = (bool) $request->input('is_header', false);
+        $type = $request->input('type', 'link');
+        $isTipJar = $type === 'tip_jar';
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'url' => $isHeader ? ['nullable', 'string'] : ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
+            'url' => ($isHeader || $isTipJar) ? ['nullable', 'string'] : ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
+            'type' => ['nullable', 'string', 'in:link,tip_jar'],
             'og_image' => ['nullable', 'url', 'max:500'],
             'utm_params' => ['nullable', 'array'],
             'utm_params.source' => ['nullable', 'string', 'max:100'],
@@ -53,9 +56,10 @@ class LinkController extends Controller
         $link = $user->links()->create([
             ...$validated,
             'order' => $order,
-            'url' => $isHeader ? null : ($validated['url'] ?? null),
+            'url' => ($isHeader || $isTipJar) ? null : ($validated['url'] ?? null),
             'is_active' => $validated['is_active'] ?? true,
             'is_header' => $isHeader,
+            'type' => $type,
         ]);
 
         return response()->json($link, 201);
@@ -82,6 +86,7 @@ class LinkController extends Controller
             'utm_params.campaign' => ['nullable', 'string', 'max:100'],
             'utm_params.term' => ['nullable', 'string', 'max:100'],
             'utm_params.content' => ['nullable', 'string', 'max:100'],
+            'type' => ['sometimes', 'nullable', 'string', 'in:link,tip_jar'],
             'is_active' => ['sometimes', 'boolean'],
             'is_pinned' => ['sometimes', 'boolean'],
             'is_header' => ['sometimes', 'boolean'],
