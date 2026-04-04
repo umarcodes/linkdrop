@@ -19,6 +19,12 @@
         >
           <span class="nav-icon">📊</span> Analytics
         </button>
+        <button
+          :class="['nav-btn', activeTab === 'profile' && 'active']"
+          @click="activeTab = 'profile'"
+        >
+          <span class="nav-icon">👤</span> Profile
+        </button>
       </nav>
 
       <div class="sidebar-user">
@@ -195,6 +201,28 @@
           </div>
         </template>
       </div>
+
+      <!-- Profile Tab -->
+      <div v-if="activeTab === 'profile'" class="panel">
+        <div class="panel-header">
+          <h2>Profile</h2>
+        </div>
+        <form class="profile-form" @submit.prevent="saveProfile">
+          <div class="field">
+            <label>Name</label>
+            <input v-model="profileForm.name" type="text" placeholder="Your name" required />
+          </div>
+          <div class="field">
+            <label>Bio</label>
+            <textarea v-model="profileForm.bio" placeholder="Tell visitors a bit about yourself…" rows="3" class="bio-input" />
+          </div>
+          <div v-if="profileError" class="error-box">{{ profileError }}</div>
+          <button type="submit" :disabled="profileLoading" class="btn-primary">
+            <span v-if="profileLoading" class="spinner" />
+            <span v-else>Save changes</span>
+          </button>
+        </form>
+      </div>
     </main>
 
     <!-- Phone Preview -->
@@ -250,6 +278,7 @@ const { post, put, del, loading: addLoading, error: addErr } = useApi()
 const { get: getLinks, loading: linksLoading } = useApi()
 const { get: getAnalytics, loading: analyticsLoading } = useApi()
 const { put: putEdit, loading: editLoading } = useApi()
+const { patch: patchProfile, loading: profileLoading } = useApi()
 const toast = useToast()
 
 const activeTab    = ref('links')
@@ -264,6 +293,9 @@ const editForm     = ref({ title: '', url: '', icon: '' })
 
 const draggingId = ref(null)
 const dragOverId = ref(null)
+
+const profileForm = ref({ name: '', bio: '' })
+const profileError = ref('')
 
 const newLink = ref({ title: '', url: '', icon: '' })
 
@@ -403,9 +435,22 @@ async function handleLogout() {
   router.push({ name: 'login' })
 }
 
+async function saveProfile() {
+  profileError.value = ''
+  try {
+    const updated = await patchProfile('/profile', profileForm.value)
+    user.value = { ...user.value, ...updated }
+    localStorage.setItem('linkdrop_user', JSON.stringify(user.value))
+    toast.success('Profile saved')
+  } catch (e) {
+    profileError.value = typeof e === 'string' ? e : 'Failed to save profile'
+  }
+}
+
 onMounted(() => {
   fetchLinks()
   fetchAnalytics()
+  profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '' }
 })
 </script>
 
@@ -760,6 +805,23 @@ input:focus { border-color: #7c6af7; }
   transition: border-color 0.2s, color 0.2s;
 }
 .btn-cancel-edit:hover { border-color: #666; color: #e8e8f0; }
+
+.profile-form { max-width: 480px; }
+
+.bio-input {
+  width: 100%;
+  background: #0a0a0f;
+  border: 1px solid #1e1e2e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #e8e8f0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+.bio-input:focus { border-color: #7c6af7; }
 
 .loading-state, .empty-state {
   text-align: center; color: #666; padding: 48px 0; font-size: 0.9rem;
