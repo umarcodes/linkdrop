@@ -65,6 +65,13 @@ class AnalyticsController extends Controller
             ->limit(10)
             ->get();
 
+        $peakHours = LinkClick::whereIn('link_id', $linkIds)
+            ->where('created_at', '>=', $since)
+            ->select(DB::raw('HOUR(created_at) as hour'), DB::raw('COUNT(*) as clicks'))
+            ->groupBy('hour')
+            ->orderBy('hour')
+            ->get();
+
         return response()->json([
             'total_clicks' => $totalClicks,
             'total_views' => $totalViews,
@@ -72,6 +79,7 @@ class AnalyticsController extends Controller
             'daily_clicks' => $dailyClicks,
             'devices' => $devices,
             'referrers' => $referrers,
+            'peak_hours' => $peakHours,
             'days' => $days,
         ]);
     }
