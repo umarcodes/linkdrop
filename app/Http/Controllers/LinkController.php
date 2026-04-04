@@ -29,6 +29,7 @@ class LinkController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'url' => $isHeader ? ['nullable', 'string'] : ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
+            'og_image' => ['nullable', 'url', 'max:500'],
             'is_active' => ['boolean'],
             'is_header' => ['boolean'],
             'password' => ['nullable', 'string', 'max:255'],
@@ -68,6 +69,7 @@ class LinkController extends Controller
             'title' => ['sometimes', 'string', 'max:255'],
             'url' => $link->is_header ? ['nullable', 'string'] : ['sometimes', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
+            'og_image' => ['sometimes', 'nullable', 'url', 'max:500'],
             'is_active' => ['sometimes', 'boolean'],
             'is_pinned' => ['sometimes', 'boolean'],
             'is_header' => ['sometimes', 'boolean'],
@@ -100,6 +102,44 @@ class LinkController extends Controller
         }
 
         return $url;
+    }
+
+    public function fetchOg(Request $request): JsonResponse
+    {
+        $request->validate(['url' => ['required', 'url', 'max:2048']]);
+
+        $url = $request->input('url');
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; LinkDrop/1.0)');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $html = curl_exec($ch);
+        curl_close($ch);
+
+        $ogImage = null;
+        $ogTitle = null;
+
+        if ($html) {
+            if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\'][^>]*>/i', $html, $m)) {
+                $ogImage = $m[1];
+            } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\'][^>]*>/i', $html, $m)) {
+                $ogImage = $m[1];
+            }
+
+            if (preg_match('/<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\'][^>]*>/i', $html, $m)) {
+                $ogTitle = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:title["\'][^>]*>/i', $html, $m)) {
+                $ogTitle = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            } elseif (preg_match('/<title[^>]*>([^<]+)<\/title>/i', $html, $m)) {
+                $ogTitle = html_entity_decode(trim($m[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+        }
+
+        return response()->json(['og_image' => $ogImage, 'og_title' => $ogTitle]);
     }
 
     public function reorder(Request $request): JsonResponse

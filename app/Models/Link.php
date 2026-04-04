@@ -16,6 +16,7 @@ class Link extends Model
         'title',
         'url',
         'icon',
+        'og_image',
         'order',
         'is_active',
         'is_pinned',

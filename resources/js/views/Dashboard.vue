@@ -106,7 +106,17 @@
             </div>
             <div class="field">
               <label>URL</label>
-              <input v-model="newLink.url" type="text" placeholder="example.com" required @input="autoFillIcon" />
+              <div class="url-with-fetch">
+                <input v-model="newLink.url" type="text" placeholder="example.com" required @input="autoFillIcon" />
+                <button type="button" class="btn-fetch-og" :disabled="ogFetching || !newLink.url" @click="fetchOgForNew">
+                  <span v-if="ogFetching" class="spinner spinner-sm" />
+                  <span v-else>Fetch Preview</span>
+                </button>
+              </div>
+            </div>
+            <div v-if="newLink.og_image" class="og-preview">
+              <img :src="newLink.og_image" class="og-preview-img" alt="Preview" />
+              <button type="button" class="og-remove" @click="newLink.og_image = ''">✕</button>
             </div>
             <div v-if="addError" class="error-box">{{ addError }}</div>
             <button type="submit" :disabled="addLoading" class="btn-primary">
@@ -151,6 +161,14 @@
                 </div>
                 <input v-model="editForm.password" type="text" placeholder="Password protect (leave blank for none)" class="edit-url-input" aria-label="Link password" />
                 <input v-model.number="editForm.max_clicks" type="number" min="1" placeholder="Max clicks (leave blank for unlimited)" class="edit-url-input" aria-label="Max clicks" />
+                <div class="og-edit-row">
+                  <input v-model="editForm.og_image" type="text" placeholder="Preview image URL (or use Fetch)" class="edit-url-input" aria-label="OG image URL" />
+                  <button type="button" class="btn-fetch-og-sm" :disabled="ogFetching" @click="fetchOgForEdit">
+                    <span v-if="ogFetching" class="spinner spinner-sm" />
+                    <span v-else>Fetch</span>
+                  </button>
+                </div>
+                <img v-if="editForm.og_image" :src="editForm.og_image" class="og-preview-img" alt="Preview" style="max-height:60px;border-radius:6px;margin-top:4px;" />
               </template>
               <div class="edit-actions">
                 <button type="submit" :disabled="editLoading" class="btn-save">
@@ -170,7 +188,8 @@
                 </div>
               </template>
               <template v-else>
-                <div class="link-icon">{{ link.icon || '🔗' }}</div>
+                <img v-if="link.og_image" :src="link.og_image" class="link-og-thumb" :alt="link.title" />
+                <div v-else class="link-icon">{{ link.icon || '🔗' }}</div>
                 <div class="link-info">
                   <div class="link-title">{{ link.title }} <span v-if="link.is_password_protected" title="Password protected" style="font-size:0.75em;opacity:0.6">🔒</span></div>
                   <div class="link-url">{{ link.url }}</div>
@@ -601,7 +620,8 @@ const deletePassword = ref('')
 const deleteError = ref('')
 const { del: delAccount, loading: deleteLoading } = useApi()
 
-const newLink = ref({ title: '', url: '', icon: '' })
+const newLink = ref({ title: '', url: '', icon: '', og_image: '' })
+const ogFetching = ref(false)
 
 const userInitial = computed(() => user.value?.name?.[0]?.toUpperCase() || '?')
 const activeLinks = computed(() => links.value.filter(l => l.is_active))
@@ -673,6 +693,7 @@ function startEdit(link) {
         title: link.title,
         url: link.url,
         icon: link.icon || '',
+        og_image: link.og_image || '',
         starts_at: link.starts_at ? link.starts_at.slice(0, 16) : '',
         ends_at:   link.ends_at   ? link.ends_at.slice(0, 16)   : '',
         password: '',
@@ -692,6 +713,29 @@ async function saveEdit(link) {
     toast.success('Link updated')
   } catch {
     toast.error('Failed to update link')
+  }
+}
+
+async function fetchOgForNew() {
+  if (!newLink.value.url) { return }
+  ogFetching.value = true
+  try {
+    const data = await post('/links/fetch-og', { url: newLink.value.url.startsWith('http') ? newLink.value.url : 'https://' + newLink.value.url })
+    if (data.og_image) { newLink.value.og_image = data.og_image }
+    if (data.og_title && !newLink.value.title) { newLink.value.title = data.og_title }
+  } catch {} finally {
+    ogFetching.value = false
+  }
+}
+
+async function fetchOgForEdit() {
+  if (!editForm.value.url) { return }
+  ogFetching.value = true
+  try {
+    const data = await post('/links/fetch-og', { url: editForm.value.url })
+    if (data.og_image) { editForm.value.og_image = data.og_image }
+  } catch {} finally {
+    ogFetching.value = false
   }
 }
 
@@ -722,7 +766,7 @@ async function handleAddLink() {
   try {
     const link = await post('/links', newLink.value)
     links.value.push(link)
-    newLink.value = { title: '', url: '', icon: '' }
+    newLink.value = { title: '', url: '', icon: '', og_image: '' }
     showAddForm.value = false
     toast.success('Link added')
   } catch (e) {
@@ -1144,6 +1188,52 @@ h2 { font-size: 1.3rem; font-weight: 600; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field { margin-bottom: 14px; }
 
+.url-with-fetch { display: flex; gap: 8px; }
+.url-with-fetch input { flex: 1; }
+
+.btn-fetch-og {
+  flex-shrink: 0;
+  background: rgba(124,106,247,0.15);
+  border: 1px solid rgba(124,106,247,0.3);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #a090f5;
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.btn-fetch-og:hover:not(:disabled) { background: rgba(124,106,247,0.25); }
+.btn-fetch-og:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-fetch-og-sm {
+  flex-shrink: 0;
+  background: rgba(124,106,247,0.15);
+  border: 1px solid rgba(124,106,247,0.3);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #a090f5;
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-fetch-og-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.og-edit-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.og-edit-row input { flex: 1; }
+
+.og-preview { position: relative; display: inline-block; margin-bottom: 12px; }
+.og-preview-img { max-height: 80px; border-radius: 8px; display: block; }
+.og-remove {
+  position: absolute; top: -6px; right: -6px;
+  background: #2e2e3e; border: none; border-radius: 50%;
+  width: 20px; height: 20px; font-size: 0.7rem;
+  color: #e8e8f0; cursor: pointer; line-height: 20px;
+  display: flex; align-items: center; justify-content: center;
+}
+
 label { display: block; font-size: 0.8rem; font-weight: 500; color: #a0a0b0; margin-bottom: 5px; }
 .field-hint { font-weight: 400; color: #555; }
 
@@ -1223,6 +1313,7 @@ input:focus { border-color: #7c6af7; }
 }
 
 .link-icon { font-size: 1.4rem; flex-shrink: 0; }
+.link-og-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
 .link-info { flex: 1; min-width: 0; }
 .link-title { font-weight: 500; font-size: 0.95rem; }
 .link-url { font-size: 0.78rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
