@@ -18,6 +18,18 @@ const routes = [
     meta: { guest: true },
   },
   {
+    path: '/app/forgot-password',
+    name: 'forgot-password',
+    component: () => import('../views/ForgotPassword.vue'),
+    meta: { guest: true },
+  },
+  {
+    path: '/app/reset-password',
+    name: 'reset-password',
+    component: () => import('../views/ResetPassword.vue'),
+    meta: { guest: true },
+  },
+  {
     path: '/app/dashboard',
     name: 'dashboard',
     component: () => import('../views/Dashboard.vue'),
