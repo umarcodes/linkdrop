@@ -129,6 +129,13 @@
                 </label>
                 <button
                   class="btn-icon"
+                  :title="link.is_pinned ? 'Unpin link' : 'Pin link'"
+                  :aria-label="link.is_pinned ? 'Unpin link' : 'Pin link'"
+                  :class="{ 'btn-pinned': link.is_pinned }"
+                  @click="togglePin(link)"
+                >📌</button>
+                <button
+                  class="btn-icon"
                   title="Edit link"
                   aria-label="Edit link"
                   @click="startEdit(link)"
@@ -370,6 +377,17 @@ async function handleAddLink() {
     addError.value = typeof addErr.value === 'string'
       ? addErr.value
       : Object.values(addErr.value || {}).flat().join(' ')
+  }
+}
+
+async function togglePin(link) {
+  try {
+    const updated = await put(`/links/${link.id}`, { is_pinned: !link.is_pinned })
+    Object.assign(link, updated)
+    links.value = [...links.value].sort((a, b) => b.is_pinned - a.is_pinned || a.order - b.order)
+    toast.success(link.is_pinned ? 'Link pinned' : 'Link unpinned')
+  } catch {
+    toast.error('Failed to update link')
   }
 }
 
@@ -722,6 +740,7 @@ input:focus { border-color: #7c6af7; }
   padding: 4px;
 }
 .btn-icon:hover { opacity: 1; }
+.btn-pinned { opacity: 1; }
 .btn-delete:hover { opacity: 1; }
 
 .btn-confirm-delete {
