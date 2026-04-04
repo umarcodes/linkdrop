@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmailVerificationController;
@@ -46,6 +47,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/webhooks', [WebhookController::class, 'index']);
     Route::post('/webhooks', [WebhookController::class, 'store']);
     Route::delete('/webhooks/{webhook}', [WebhookController::class, 'destroy']);
+});
+
+// Admin routes
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/stats', [AdminController::class, 'stats']);
+    Route::get('/users', [AdminController::class, 'users']);
+    Route::patch('/users/{user}', [AdminController::class, 'updateUser']);
+    Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
 });
 
 // Public API (API key auth)
