@@ -18,12 +18,37 @@ class AuthController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $mode = config('app.registration_mode', 'open');
+
+        if ($mode === 'closed') {
+            return response()->json(['message' => 'Registration is currently closed.'], 403);
+        }
+
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:32', 'alpha_dash', 'unique:users,username', new NotReservedUsername],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
+        ];
+
+        if ($mode === 'invite') {
+            $rules['invite_code'] = ['required', 'string'];
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($mode === 'invite') {
+            $entry = DB::table('waitlist')
+                ->where('invite_code', $validated['invite_code'])
+                ->where('invited', true)
+                ->first();
+
+            if (! $entry) {
+                return response()->json(['message' => 'Invalid or expired invite code.'], 422);
+            }
+
+            DB::table('waitlist')->where('invite_code', $validated['invite_code'])->delete();
+        }
 
         $user = User::create([
             'name' => $validated['name'],
