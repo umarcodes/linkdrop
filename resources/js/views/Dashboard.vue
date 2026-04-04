@@ -298,6 +298,21 @@
               <div class="bar-count">{{ day.clicks }}</div>
             </div>
           </div>
+
+          <h3 class="section-title">Peak Hours</h3>
+          <div v-if="(analytics.peak_hours || []).length === 0" class="empty-state small">No data yet.</div>
+          <div v-else class="peak-hours-grid">
+            <div
+              v-for="h in peakHoursGrid"
+              :key="h.hour"
+              class="peak-hour-cell"
+              :style="{ opacity: h.opacity }"
+              :title="`${h.label}: ${h.clicks} clicks`"
+            >
+              <div class="peak-hour-bar" :style="{ height: h.barHeight }" />
+              <div class="peak-hour-label">{{ h.label }}</div>
+            </div>
+          </div>
         </template>
       </div>
 
@@ -533,6 +548,24 @@ const maxReferrer = computed(() => {
   return counts.length ? Math.max(...counts) : 1
 })
 function referrerBarWidth(count) { return `${Math.round((count / maxReferrer.value) * 100)}%` }
+
+const peakHoursGrid = computed(() => {
+  const raw = analytics.value.peak_hours || []
+  const map = {}
+  raw.forEach(r => { map[r.hour] = r.clicks })
+  const maxClk = Math.max(...Object.values(map), 1)
+  return Array.from({ length: 24 }, (_, i) => {
+    const clicks = map[i] || 0
+    const ratio = clicks / maxClk
+    return {
+      hour: i,
+      clicks,
+      label: i === 0 ? '12a' : i < 12 ? `${i}a` : i === 12 ? '12p' : `${i - 12}p`,
+      barHeight: `${Math.max(ratio * 40, 2)}px`,
+      opacity: 0.2 + ratio * 0.8,
+    }
+  })
+})
 
 function ctr(clicks) {
   const views = analytics.value.total_views || 0
@@ -1317,6 +1350,11 @@ input:focus { border-color: #7c6af7; }
 .bar-fill { height: 100%; background: linear-gradient(135deg, #7c6af7, #e96af5); border-radius: 4px; transition: width 0.5s ease; }
 .bar-count { font-size: 0.82rem; color: #666; width: 28px; text-align: right; flex-shrink: 0; }
 .bar-ctr { font-size: 0.72rem; color: #555; width: 40px; text-align: right; flex-shrink: 0; }
+
+.peak-hours-grid { display: flex; gap: 3px; align-items: flex-end; height: 60px; margin-bottom: 28px; }
+.peak-hour-cell { display: flex; flex-direction: column; align-items: center; flex: 1; cursor: default; }
+.peak-hour-bar { width: 100%; background: #7c6af7; border-radius: 2px 2px 0 0; min-height: 2px; transition: height 0.4s ease; }
+.peak-hour-label { font-size: 0.55rem; color: #555; margin-top: 3px; white-space: nowrap; }
 
 /* Phone Preview */
 .preview-panel {
