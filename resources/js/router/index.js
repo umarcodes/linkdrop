@@ -4,14 +4,20 @@ const routes = [
   {
     path: '/',
     beforeEnter: () => {
-      // On the main app domain, redirect to dashboard.
       // On a custom domain, fall through to render the profile via domain-lookup.
       const appHost = import.meta.env.VITE_APP_HOST
-      if (!appHost || window.location.hostname === appHost) {
-        return '/app/dashboard'
+      if (appHost && window.location.hostname !== appHost) {
+        return undefined // allow through to Profile.vue
       }
+      // On the main domain: show landing page (no redirect)
     },
-    component: () => import('../views/Profile.vue'),
+    component: () => {
+      const appHost = import.meta.env.VITE_APP_HOST
+      if (appHost && window.location.hostname !== appHost) {
+        return import('../views/Profile.vue')
+      }
+      return import('../views/Landing.vue')
+    },
   },
   {
     path: '/app/login',
@@ -65,6 +71,13 @@ router.beforeEach((to) => {
 
   if (to.meta.auth && !token) return { name: 'login' }
   if (to.meta.guest && token) return { name: 'dashboard' }
+  // Authenticated users hitting the landing page go straight to dashboard
+  if (to.path === '/' && token) {
+    const appHost = import.meta.env.VITE_APP_HOST
+    if (!appHost || window.location.hostname === appHost) {
+      return { name: 'dashboard' }
+    }
+  }
 })
 
 export default router
