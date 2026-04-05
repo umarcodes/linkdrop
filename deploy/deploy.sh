@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="/var/www/linkdrop"
+APP_DIR="/var/www/umar.app/projects/linkdrop"
 
 echo "==> Pulling latest code…"
 cd "$APP_DIR"

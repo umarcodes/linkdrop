@@ -14,11 +14,4 @@ jobs:
           host: umar.app
           username: umar
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /var/www/umar.app/projects/linkdrop
-            git pull origin main
-            composer install --no-interaction --no-dev --optimize-autoloader
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+          script: bash /var/www/umar.app/projects/linkdrop/deploy/deploy.sh
