@@ -143,7 +143,7 @@ const route = useRoute()
 const { get, post } = useApi()
 
 const profile   = ref(null)
-const username  = ref(username.value || null)
+const username  = ref(route.params.username || null)
 const loading  = ref(true)
 const notFound = ref(false)
 const copied      = ref(false)
