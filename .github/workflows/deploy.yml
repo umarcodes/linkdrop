@@ -3,29 +3,21 @@ name: Deploy
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy to umar.app
-
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: umar.app
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
+          username: umar
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
             cd /var/www/umar.app/projects/linkdrop
-            git fetch origin main
-            git reset --hard origin/main
-            rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
-            composer install --no-dev --optimize-autoloader --no-interaction --no-progress
-            npm ci
-            npm run build
+            git pull origin main
+            composer install --no-interaction --no-dev --optimize-autoloader
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
