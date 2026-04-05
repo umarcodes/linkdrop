@@ -23,6 +23,6 @@ php artisan route:cache
 php artisan view:cache
 
 echo "==> Reloading PHP-FPM…"
-sudo systemctl reload php8.2-fpm
+sudo systemctl reload php8.3-fpm
 
 echo "==> Deploy complete."
