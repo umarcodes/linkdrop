@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -53,7 +54,7 @@ class PasswordResetController extends Controller
             return response()->json(['message' => 'Invalid or expired reset link.'], 422);
         }
 
-        if (now()->diffInMinutes($record->created_at) > 60) {
+        if (now()->diffInMinutes(Carbon::parse($record->created_at)) > 60) {
             DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
             return response()->json(['message' => 'Invalid or expired reset link.'], 422);

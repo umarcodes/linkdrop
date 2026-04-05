@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -51,7 +52,7 @@ class EmailVerificationController extends Controller
             return response()->json(['message' => 'Invalid or expired token.'], 422);
         }
 
-        if (now()->diffInMinutes($record->created_at) > 60) {
+        if (now()->diffInMinutes(Carbon::parse($record->created_at)) > 60) {
             DB::table('email_verification_tokens')->where('email', $request->email)->delete();
 
             return response()->json(['message' => 'Token has expired.'], 422);

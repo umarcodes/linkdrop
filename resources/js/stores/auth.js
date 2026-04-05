@@ -5,7 +5,7 @@ const TOKEN_KEY = 'linkdrop_token'
 const USER_KEY  = 'linkdrop_user'
 
 const token = ref(localStorage.getItem(TOKEN_KEY))
-const user  = ref(JSON.parse(localStorage.getItem(USER_KEY) || 'null'))
+const user  = ref((() => { try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null') } catch { return null } })())
 
 export function useAuth() {
   const { post, upload, loading, error } = useApi()
