@@ -123,8 +123,8 @@
               <input type="file" ref="fileInputRef" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.png,.jpg,.jpeg,.gif,.webp,.mp3,.mp4,.mov" required class="file-input" />
             </div>
             <div v-if="addError" class="error-box">{{ addError }}</div>
-            <button type="submit" :disabled="addLoading" class="btn-primary">
-              <span v-if="addLoading" class="spinner" />
+            <button type="submit" :disabled="fileUploading" class="btn-primary">
+              <span v-if="fileUploading" class="spinner" />
               <span v-else>Upload &amp; Add</span>
             </button>
           </form>
@@ -676,6 +676,7 @@ const tipJarForm = ref({ title: 'Support my work ☕' })
 const showFileForm = ref(false)
 const fileForm = ref({ title: '' })
 const fileInputRef = ref(null)
+const fileUploading = ref(false)
 const newHeaderTitle = ref('')
 const confirmLogout = ref(false)
 const links        = ref([])
@@ -691,7 +692,7 @@ const editForm     = ref({ title: '', url: '', icon: '', utm_params: { source: '
 const draggingId = ref(null)
 const dragOverId = ref(null)
 
-const profileForm = ref({ name: '', bio: '', theme: {} })
+const profileForm = ref({ name: '', bio: '', theme: {}, badge_available_for_hire: false, custom_domain: '' })
 const adminStats = ref({})
 const adminUsers = ref([])
 const adminLoading = ref(false)
@@ -906,7 +907,7 @@ async function handleAddFileLink() {
   const file = fileInputRef.value?.files?.[0]
   if (!file) { addError.value = 'Please select a file.'; return }
 
-  addLoading.value = true
+  fileUploading.value = true
   try {
     // 1. Create the link record
     const link = await post('/links', { title: fileForm.value.title, type: 'file' })
@@ -931,7 +932,7 @@ async function handleAddFileLink() {
   } catch (e) {
     addError.value = e.message || 'Failed to add file link'
   } finally {
-    addLoading.value = false
+    fileUploading.value = false
   }
 }
 

@@ -142,7 +142,8 @@ import { detectSocialIcon } from '../composables/useSocialIcon'
 const route = useRoute()
 const { get, post } = useApi()
 
-const profile  = ref(null)
+const profile   = ref(null)
+const username  = ref(username.value || null)
 const loading  = ref(true)
 const notFound = ref(false)
 const copied      = ref(false)
@@ -159,12 +160,12 @@ async function submitPassword() {
   passwordModal.value.loading = true
   passwordModal.value.error = ''
   try {
-    const res = await post(`/p/${route.params.username}/verify/${link.id}`, {
+    const res = await post(`/p/${username.value}/verify/${link.id}`, {
       password: passwordModal.value.value,
     })
     closePasswordModal()
     window.open(res.url, '_blank', 'noopener,noreferrer')
-    try { await post(`/p/${route.params.username}/click/${link.id}`) } catch {}
+    try { await post(`/p/${username.value}/click/${link.id}`) } catch {}
   } catch {
     passwordModal.value.error = 'Incorrect password.'
     passwordModal.value.loading = false
@@ -191,20 +192,21 @@ const initial = computed(() => profile.value?.name?.[0]?.toUpperCase() || '?')
 async function fetchProfile() {
   loading.value = true
   try {
-    let username = route.params.username
+    let resolved = username.value
 
     // Custom domain: resolve username from host
-    if (!username) {
+    if (!resolved) {
       const res = await get(`/domain-lookup?host=${window.location.hostname}`)
-      username = res.username
+      resolved = res.username
     }
 
-    if (!username) {
+    if (!resolved) {
       notFound.value = true
       return
     }
 
-    profile.value = await get(`/p/${username}`)
+    username.value = resolved
+    profile.value = await get(`/p/${resolved}`)
     applyProfileMeta(profile.value)
   } catch {
     notFound.value = true
@@ -271,7 +273,7 @@ async function handleLinkClick(link) {
     window.open(buildUrl(link), '_blank', 'noopener,noreferrer')
   }
   try {
-    await post(`/p/${route.params.username}/click/${link.id}`)
+    await post(`/p/${username.value}/click/${link.id}`)
   } catch {}
 }
 

@@ -52,7 +52,7 @@ class LinkController extends Controller
             return response()->json(['message' => "You have reached the link limit for the {$user->plan} plan. Upgrade to Pro for unlimited links."], 422);
         }
 
-        $order = $user->links()->max('order') + 1;
+        $order = ($user->links()->max('order') ?? 0) + 1;
 
         $link = $user->links()->create([
             ...$validated,
