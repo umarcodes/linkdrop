@@ -8,14 +8,17 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: umar.app
-          username: umar
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -euo pipefail
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: ssh-keyscan -H umar.app >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh umar@umar.app 'set -euo pipefail
             cd /var/www/umar.app/projects/linkdrop
             git pull origin main
             composer install --no-dev --optimize-autoloader --no-interaction
@@ -26,3 +29,4 @@ jobs:
             php artisan route:cache
             php artisan view:cache
             sudo systemctl reload php8.3-fpm
+            echo "Deploy complete."'
