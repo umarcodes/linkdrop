@@ -32,6 +32,9 @@
         >
           <span class="nav-icon">🛡</span> Admin
         </button>
+        <a href="/app/guide" class="nav-btn">
+          <span class="nav-icon">📖</span> Guide
+        </a>
       </nav>
 
       <div class="sidebar-user">

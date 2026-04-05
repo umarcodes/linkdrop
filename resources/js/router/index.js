@@ -55,6 +55,12 @@ const routes = [
     meta: { auth: true },
   },
   {
+    path: '/app/guide',
+    name: 'guide',
+    component: () => import('../views/Guide.vue'),
+    meta: { auth: true },
+  },
+  {
     path: '/:username',
     name: 'profile',
     component: () => import('../views/Profile.vue'),
