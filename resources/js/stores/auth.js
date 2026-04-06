@@ -1,55 +1,65 @@
 import { ref, computed } from 'vue'
-import { useApi } from '../composables/useApi'
+import { useApi, fetchCsrfCookie } from '../composables/useApi'
 
-const TOKEN_KEY = 'linkdrop_token'
-const USER_KEY  = 'linkdrop_user'
+const USER_KEY = 'linkdrop_user'
 
-const token = ref(localStorage.getItem(TOKEN_KEY))
-const user  = ref((() => { try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null') } catch { return null } })())
+const user = ref((() => { try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null') } catch { return null } })())
 
 export function useAuth() {
   const { post, upload, loading, error } = useApi()
 
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => user.value !== null)
 
-  function persist(t, u) {
-    token.value = t
-    user.value  = u
-    localStorage.setItem(TOKEN_KEY, t)
-    localStorage.setItem(USER_KEY, JSON.stringify(u))
+  function setUser(u) {
+    user.value = u
+    if (u) {
+      localStorage.setItem(USER_KEY, JSON.stringify(u))
+    } else {
+      localStorage.removeItem(USER_KEY)
+    }
   }
 
-  function clear() {
-    token.value = null
-    user.value  = null
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(USER_KEY)
+  async function init() {
+    try {
+      const res = await fetch('/api/me', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      })
+      if (res.ok) {
+        setUser(await res.json())
+      } else {
+        setUser(null)
+      }
+    } catch {
+      setUser(null)
+    }
   }
 
   async function login(credentials) {
+    await fetchCsrfCookie()
     const data = await post('/login', credentials)
-    persist(data.token, data.user)
+    setUser(data.user)
     return data
   }
 
   async function register(payload) {
+    await fetchCsrfCookie()
     const data = await post('/register', payload)
-    persist(data.token, data.user)
+    setUser(data.user)
     return data
   }
 
   async function logout() {
-    try { await post('/logout') } finally { clear() }
+    try { await post('/logout') } finally { setUser(null) }
   }
 
   async function updateAvatar(file) {
     const fd = new FormData()
     fd.append('avatar', file)
     const data = await upload('/profile/avatar', fd)
-    user.value = { ...user.value, avatar: data.avatar }
-    localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+    setUser({ ...user.value, avatar: data.avatar })
     return data.avatar
   }
 
-  return { user, token, isAuthenticated, loading, error, login, register, logout, updateAvatar }
+  return { user, isAuthenticated, loading, error, init, login, register, logout, updateAvatar }
 }

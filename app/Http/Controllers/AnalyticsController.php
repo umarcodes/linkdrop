@@ -6,7 +6,6 @@ use App\Models\LinkClick;
 use App\Models\ProfileView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AnalyticsController extends Controller
@@ -23,69 +22,64 @@ class AnalyticsController extends Controller
 
         $linkIds = $user->links()->pluck('id');
 
-        $totalClicks = LinkClick::whereIn('link_id', $linkIds)
+        // Single query for all click-level aggregations; avoids 8 separate scans of the same table.
+        $clicks = LinkClick::whereIn('link_id', $linkIds)
             ->where('created_at', '>=', $since)
-            ->count();
+            ->get(['device', 'browser', 'country', 'referrer', 'created_at']);
+
+        $totalClicks = $clicks->count();
 
         $perLink = $user->links()
             ->withCount(['clicks as clicks_count' => fn ($q) => $q->where('created_at', '>=', $since)])
             ->orderBy('order')
             ->get(['id', 'title', 'clicks_count']);
 
-        $dailyClicks = LinkClick::whereIn('link_id', $linkIds)
-            ->where('created_at', '>=', $since)
-            ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as clicks'))
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
-
         $totalViews = ProfileView::where('user_id', $user->id)
             ->where('created_at', '>=', $since)
             ->count();
 
-        $deviceRows = LinkClick::whereIn('link_id', $linkIds)
-            ->where('created_at', '>=', $since)
+        $dailyClicks = $clicks
+            ->groupBy(fn ($c) => $c->created_at->toDateString())
+            ->map(fn ($g, $date) => ['date' => $date, 'clicks' => $g->count()])
+            ->sortKeys()
+            ->values();
+
+        $devices = $clicks
             ->whereNotNull('device')
-            ->select('device', DB::raw('COUNT(*) as count'))
             ->groupBy('device')
-            ->get();
+            ->map->count()
+            ->mapWithKeys(fn ($count, $device) => [ucfirst($device) => $count]);
 
-        $devices = $deviceRows->mapWithKeys(fn ($r) => [ucfirst($r->device) => $r->count]);
-
-        $browserRows = LinkClick::whereIn('link_id', $linkIds)
-            ->where('created_at', '>=', $since)
+        $browsers = $clicks
             ->whereNotNull('browser')
-            ->select('browser', DB::raw('COUNT(*) as count'))
             ->groupBy('browser')
-            ->orderByDesc('count')
-            ->get();
+            ->map->count()
+            ->sortByDesc(fn ($v) => $v)
+            ->mapWithKeys(fn ($count, $browser) => [$browser => $count]);
 
-        $browsers = $browserRows->mapWithKeys(fn ($r) => [$r->browser => $r->count]);
-
-        $countries = LinkClick::whereIn('link_id', $linkIds)
-            ->where('created_at', '>=', $since)
+        $countries = $clicks
             ->whereNotNull('country')
-            ->select('country', DB::raw('COUNT(*) as count'))
             ->groupBy('country')
-            ->orderByDesc('count')
-            ->limit(10)
-            ->get();
+            ->map->count()
+            ->sortByDesc(fn ($v) => $v)
+            ->take(10)
+            ->map(fn ($count, $country) => ['country' => $country, 'count' => $count])
+            ->values();
 
-        $referrers = LinkClick::whereIn('link_id', $linkIds)
-            ->where('created_at', '>=', $since)
+        $referrers = $clicks
             ->whereNotNull('referrer')
-            ->select('referrer', DB::raw('COUNT(*) as count'))
             ->groupBy('referrer')
-            ->orderByDesc('count')
-            ->limit(10)
-            ->get();
+            ->map->count()
+            ->sortByDesc(fn ($v) => $v)
+            ->take(10)
+            ->map(fn ($count, $referrer) => ['referrer' => $referrer, 'count' => $count])
+            ->values();
 
-        $peakHours = LinkClick::whereIn('link_id', $linkIds)
-            ->where('created_at', '>=', $since)
-            ->select(DB::raw('HOUR(created_at) as hour'), DB::raw('COUNT(*) as clicks'))
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get();
+        $peakHours = $clicks
+            ->groupBy(fn ($c) => (int) $c->created_at->format('G'))
+            ->map(fn ($g, $hour) => ['hour' => $hour, 'clicks' => $g->count()])
+            ->sortBy('hour')
+            ->values();
 
         return response()->json([
             'total_clicks' => $totalClicks,

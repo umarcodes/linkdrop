@@ -57,7 +57,10 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $token = $user->createToken('linkdrop')->plainTextToken;
+        Auth::login($user);
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
         $verificationToken = Str::random(64);
 
@@ -80,7 +83,7 @@ class AuthController extends Controller
             // Non-fatal — user can re-request from dashboard
         }
 
-        return response()->json(['user' => $user, 'token' => $token], 201);
+        return response()->json(['user' => $user], 201);
     }
 
     public function login(Request $request): JsonResponse
@@ -97,14 +100,20 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-        $token = $user->createToken('linkdrop')->plainTextToken;
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
-        return response()->json(['user' => $user, 'token' => $token]);
+        return response()->json(['user' => $user]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()?->delete();
+        Auth::guard('web')->logout();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['message' => 'Logged out successfully']);
     }

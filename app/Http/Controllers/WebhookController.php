@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Webhook;
+use App\Rules\NoPrivateUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,8 +17,8 @@ class WebhookController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'url' => ['required', 'url', 'max:2048'],
-            'event' => ['sometimes', 'string', 'in:link.clicked,profile.viewed'],
+            'url' => ['required', 'url', 'max:2048', 'starts_with:https://', new NoPrivateUrl],
+            'event' => ['required', 'string', 'in:link.clicked,profile.viewed'],
             'secret' => ['nullable', 'string', 'max:255'],
         ]);
 
