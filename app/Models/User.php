@@ -67,6 +67,8 @@ class User extends Authenticatable
 
     public function maxLinks(): int
     {
-        return $this->isPro() ? 999 : 10;
+        return $this->isPro()
+            ? config('linkdrop.pro_tier_link_limit')
+            : config('linkdrop.free_tier_link_limit');
     }
 }

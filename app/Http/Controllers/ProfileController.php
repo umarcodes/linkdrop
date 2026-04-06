@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class ProfileController extends Controller
 {
@@ -67,7 +71,7 @@ class ProfileController extends Controller
 
         $request->validate(['password' => ['required', 'string']]);
 
-        if ($request->password !== $link->getRawOriginal('password')) {
+        if (! Hash::check($request->password, $link->getRawOriginal('password'))) {
             return response()->json(['message' => 'Incorrect password.'], 422);
         }
 
@@ -110,27 +114,49 @@ class ProfileController extends Controller
         $ip = $request->ip();
         $country = null;
 
-        // Only geolocate public, routable IPs
+        // Only geolocate public, routable IPs; cache results by IP to avoid repeated external calls
         if ($ip && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-            $ch = curl_init("http://ip-api.com/json/{$ip}?fields=countryCode");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-            $geo = curl_exec($ch);
-            curl_close($ch);
-            if ($geo) {
-                $data = json_decode($geo, true);
-                $country = $data['countryCode'] ?? null;
-            }
+            $country = Cache::remember("geo:{$ip}", now()->addDay(), function () use ($ip) {
+                $ch = curl_init("http://ip-api.com/json/{$ip}?fields=countryCode");
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+                $geo = curl_exec($ch);
+                curl_close($ch);
+                if ($geo) {
+                    $data = json_decode($geo, true);
+
+                    return $data['countryCode'] ?? null;
+                }
+
+                return null;
+            });
         }
 
-        $link->clicks()->create([
-            'ip' => $ip,
-            'user_agent' => $ua,
-            'referrer' => $referrer,
-            'device' => $device,
-            'browser' => $browser,
-            'country' => $country,
-        ]);
+        $recorded = DB::transaction(function () use ($link, $ip, $ua, $referrer, $device, $browser, $country) {
+            if ($link->max_clicks !== null) {
+                $clickCount = DB::table('link_clicks')
+                    ->where('link_id', $link->id)
+                    ->lockForUpdate()
+                    ->count();
+                if ($clickCount >= $link->max_clicks) {
+                    return false;
+                }
+            }
+            $link->clicks()->create([
+                'ip' => $ip,
+                'user_agent' => $ua,
+                'referrer' => $referrer,
+                'device' => $device,
+                'browser' => $browser,
+                'country' => $country,
+            ]);
+
+            return true;
+        });
+
+        if (! $recorded) {
+            return response()->json(['message' => 'Click limit reached'], 422);
+        }
 
         $webhooks = $user->webhooks()->where('event', 'link.clicked')->where('is_active', true)->get();
 
@@ -153,8 +179,19 @@ class ProfileController extends Controller
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-            curl_exec($ch);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
+
+            if ($response === false || $httpCode >= 400) {
+                Log::warning('Webhook delivery failed', [
+                    'webhook_id' => $webhook->id,
+                    'url' => $webhook->url,
+                    'http_code' => $httpCode,
+                    'curl_error' => $curlError ?: null,
+                ]);
+            }
         }
 
         return response()->json(['message' => 'Click tracked']);

@@ -11,61 +11,53 @@ class LinkTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function actingAsUser(): array
-    {
-        $user  = User::factory()->create();
-        $token = $user->createToken('test')->plainTextToken;
-
-        return [$user, $token];
-    }
-
     public function test_user_can_create_link(): void
     {
-        [$user, $token] = $this->actingAsUser();
+        $user = User::factory()->create();
 
-        $this->withToken($token)->postJson('/api/links', [
+        $this->actingAs($user)->postJson('/api/links', [
             'title' => 'My Website',
-            'url'   => 'https://example.com',
+            'url' => 'https://example.com',
         ])->assertCreated()->assertJsonFragment(['title' => 'My Website']);
     }
 
     public function test_invalid_url_is_rejected(): void
     {
-        [$user, $token] = $this->actingAsUser();
+        $user = User::factory()->create();
 
-        $this->withToken($token)->postJson('/api/links', [
+        $this->actingAs($user)->postJson('/api/links', [
             'title' => 'Bad Link',
-            'url'   => 'ftp://example.com',
+            'url' => 'ftp://example.com',
         ])->assertUnprocessable()->assertJsonValidationErrors(['url']);
     }
 
     public function test_user_can_list_links(): void
     {
-        [$user, $token] = $this->actingAsUser();
+        $user = User::factory()->create();
         Link::factory()->count(3)->create(['user_id' => $user->id]);
 
-        $this->withToken($token)->getJson('/api/links')
+        $this->actingAs($user)->getJson('/api/links')
             ->assertOk()
             ->assertJsonCount(3);
     }
 
     public function test_user_can_toggle_active(): void
     {
-        [$user, $token] = $this->actingAsUser();
+        $user = User::factory()->create();
         $link = Link::factory()->create(['user_id' => $user->id, 'is_active' => true]);
 
-        $this->withToken($token)->putJson("/api/links/{$link->id}", [
+        $this->actingAs($user)->putJson("/api/links/{$link->id}", [
             'is_active' => false,
         ])->assertOk()->assertJsonFragment(['is_active' => false]);
     }
 
     public function test_cannot_update_another_users_link(): void
     {
-        [$user, $token] = $this->actingAsUser();
+        $user = User::factory()->create();
         $other = User::factory()->create();
-        $link  = Link::factory()->create(['user_id' => $other->id]);
+        $link = Link::factory()->create(['user_id' => $other->id]);
 
-        $this->withToken($token)->putJson("/api/links/{$link->id}", [
+        $this->actingAs($user)->putJson("/api/links/{$link->id}", [
             'title' => 'Hijacked',
         ])->assertForbidden();
     }

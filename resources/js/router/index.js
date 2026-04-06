@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuth } from '../stores/auth'
 
 const routes = [
   {
@@ -73,12 +74,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('linkdrop_token')
+  const { isAuthenticated } = useAuth()
 
-  if (to.meta.auth && !token) return { name: 'login' }
-  if (to.meta.guest && token) return { name: 'dashboard' }
+  if (to.meta.auth && !isAuthenticated.value) return { name: 'login' }
+  if (to.meta.guest && isAuthenticated.value) return { name: 'dashboard' }
   // Authenticated users hitting the landing page go straight to dashboard
-  if (to.path === '/' && token) {
+  if (to.path === '/' && isAuthenticated.value) {
     const appHost = import.meta.env.VITE_APP_HOST
     if (!appHost || window.location.hostname === appHost) {
       return { name: 'dashboard' }

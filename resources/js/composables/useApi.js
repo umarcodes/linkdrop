@@ -2,22 +2,27 @@ import { ref } from 'vue'
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
-function getToken() {
-  return localStorage.getItem('linkdrop_token')
+function getCsrfToken() {
+  const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
 }
 
 function buildHeaders() {
   const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-  const token = getToken()
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  const csrf = getCsrfToken()
+  if (csrf) headers['X-XSRF-TOKEN'] = csrf
   return headers
 }
 
 function buildUploadHeaders() {
   const headers = { Accept: 'application/json' }
-  const token = getToken()
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  const csrf = getCsrfToken()
+  if (csrf) headers['X-XSRF-TOKEN'] = csrf
   return headers
+}
+
+export async function fetchCsrfCookie() {
+  await fetch('/sanctum/csrf-cookie', { credentials: 'include' })
 }
 
 export function useApi() {
@@ -30,6 +35,7 @@ export function useApi() {
     try {
       const res = await fetch(`${BASE_URL}${path}`, {
         method,
+        credentials: 'include',
         headers: buildHeaders(),
         body: body ? JSON.stringify(body) : null,
       })
@@ -53,6 +59,7 @@ export function useApi() {
     try {
       const res = await fetch(`${BASE_URL}${path}`, {
         method: 'POST',
+        credentials: 'include',
         headers: buildUploadHeaders(),
         body: formData,
       })

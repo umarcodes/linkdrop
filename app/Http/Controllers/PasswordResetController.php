@@ -54,7 +54,7 @@ class PasswordResetController extends Controller
             return response()->json(['message' => 'Invalid or expired reset link.'], 422);
         }
 
-        if (now()->diffInMinutes(Carbon::parse($record->created_at)) > 60) {
+        if (now()->diffInMinutes(Carbon::parse($record->created_at)) > config('linkdrop.token_expiry_minutes')) {
             DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
             return response()->json(['message' => 'Invalid or expired reset link.'], 422);

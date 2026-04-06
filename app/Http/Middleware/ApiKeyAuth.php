@@ -16,13 +16,14 @@ class ApiKeyAuth
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $key = $request->header('X-API-Key') ?? $request->query('api_key');
+        $key = $request->header('X-API-Key');
 
         if (! $key) {
             return response()->json(['error' => 'API key required.'], 401);
         }
 
-        $user = User::where('api_key', $key)->first();
+        $hashed = hash_hmac('sha256', $key, config('app.key'));
+        $user = User::where('api_key', $hashed)->first();
 
         if (! $user) {
             return response()->json(['error' => 'Invalid API key.'], 401);

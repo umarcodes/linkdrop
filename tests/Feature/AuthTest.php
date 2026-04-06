@@ -13,14 +13,14 @@ class AuthTest extends TestCase
     public function test_user_can_register(): void
     {
         $response = $this->postJson('/api/register', [
-            'name'                  => 'Test User',
-            'username'              => 'testuser',
-            'email'                 => 'test@example.com',
-            'password'              => 'password123',
+            'name' => 'Test User',
+            'username' => 'testuser',
+            'email' => 'test@example.com',
+            'password' => 'password123',
             'password_confirmation' => 'password123',
         ]);
 
-        $response->assertCreated()->assertJsonStructure(['user', 'token']);
+        $response->assertCreated()->assertJsonStructure(['user']);
         $this->assertDatabaseHas('users', ['username' => 'testuser']);
     }
 
@@ -29,10 +29,10 @@ class AuthTest extends TestCase
         User::factory()->create(['username' => 'taken']);
 
         $this->postJson('/api/register', [
-            'name'                  => 'Another User',
-            'username'              => 'taken',
-            'email'                 => 'another@example.com',
-            'password'              => 'password123',
+            'name' => 'Another User',
+            'username' => 'taken',
+            'email' => 'another@example.com',
+            'password' => 'password123',
             'password_confirmation' => 'password123',
         ])->assertUnprocessable()->assertJsonValidationErrors(['username']);
     }
@@ -42,9 +42,9 @@ class AuthTest extends TestCase
         $user = User::factory()->create(['password' => bcrypt('password123')]);
 
         $this->postJson('/api/login', [
-            'email'    => $user->email,
+            'email' => $user->email,
             'password' => 'password123',
-        ])->assertOk()->assertJsonStructure(['user', 'token']);
+        ])->assertOk()->assertJsonStructure(['user']);
     }
 
     public function test_wrong_password_is_rejected(): void
@@ -52,17 +52,16 @@ class AuthTest extends TestCase
         $user = User::factory()->create();
 
         $this->postJson('/api/login', [
-            'email'    => $user->email,
+            'email' => $user->email,
             'password' => 'wrongpassword',
         ])->assertUnprocessable();
     }
 
     public function test_user_can_logout(): void
     {
-        $user  = User::factory()->create();
-        $token = $user->createToken('test')->plainTextToken;
+        $user = User::factory()->create();
 
-        $this->withToken($token)
+        $this->actingAs($user)
             ->postJson('/api/logout')
             ->assertOk();
     }

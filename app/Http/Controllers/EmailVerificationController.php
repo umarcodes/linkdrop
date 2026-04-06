@@ -52,7 +52,7 @@ class EmailVerificationController extends Controller
             return response()->json(['message' => 'Invalid or expired token.'], 422);
         }
 
-        if (now()->diffInMinutes(Carbon::parse($record->created_at)) > 60) {
+        if (now()->diffInMinutes(Carbon::parse($record->created_at)) > config('linkdrop.token_expiry_minutes')) {
             DB::table('email_verification_tokens')->where('email', $request->email)->delete();
 
             return response()->json(['message' => 'Token has expired.'], 422);

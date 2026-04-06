@@ -35,8 +35,9 @@ class PublicApiController extends Controller
     public function generateKey(Request $request): JsonResponse
     {
         $key = Str::random(48);
-        $request->user()->update(['api_key' => $key]);
+        $request->user()->update(['api_key' => hash_hmac('sha256', $key, config('app.key'))]);
 
+        // Return the plaintext key once — it is not stored and cannot be recovered.
         return response()->json(['api_key' => $key]);
     }
 

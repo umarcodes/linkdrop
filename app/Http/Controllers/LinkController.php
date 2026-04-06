@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Link;
+use App\Rules\NoPrivateUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -129,7 +130,7 @@ class LinkController extends Controller
         }
 
         $request->validate([
-            'file' => ['required', 'file', 'max:20480', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,png,jpg,jpeg,gif,webp,mp3,mp4,mov'],
+            'file' => ['required', 'file', 'max:'.config('linkdrop.max_file_upload_kb'), 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,png,jpg,jpeg,gif,webp,mp3,mp4,mov'],
         ]);
 
         // Delete old file
@@ -148,7 +149,7 @@ class LinkController extends Controller
 
     public function fetchOg(Request $request): JsonResponse
     {
-        $request->validate(['url' => ['required', 'url', 'max:2048']]);
+        $request->validate(['url' => ['required', 'url', 'max:2048', new NoPrivateUrl]]);
 
         $url = $request->input('url');
 
@@ -158,7 +159,6 @@ class LinkController extends Controller
         curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
         curl_setopt($ch, CURLOPT_TIMEOUT, 8);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; LinkDrop/1.0)');
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $html = curl_exec($ch);
         curl_close($ch);
 
