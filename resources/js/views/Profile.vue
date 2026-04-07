@@ -76,6 +76,17 @@
               loading="lazy"
             />
           </div>
+          <!-- Paid link -->
+          <div
+            v-else-if="link.is_paid"
+            class="link-item paid-link"
+            @click="handlePaidLinkClick(link)"
+          >
+            <img v-if="link.og_image" :src="link.og_image" class="link-og-thumb" :alt="link.title" />
+            <span v-else class="link-icon">{{ link.icon || '🔒' }}</span>
+            <span class="link-title">{{ link.title }}</span>
+            <span class="link-paid-badge">{{ formatPrice(link.price_cents, link.currency) }}</span>
+          </div>
           <!-- Regular link -->
           <a
             v-else
@@ -150,6 +161,7 @@ const copied      = ref(false)
 const copiedLinkId = ref(null)
 
 const passwordModal = ref({ link: null, value: '', error: '', loading: false })
+const paidLinkLoading = ref(null)
 
 function closePasswordModal() {
   passwordModal.value = { link: null, value: '', error: '', loading: false }
@@ -259,6 +271,23 @@ function embedUrl(url) {
   return null
 }
 
+function formatPrice(priceCents, currency) {
+  const amount = (priceCents / 100).toFixed(2)
+  const symbol = currency?.toUpperCase() === 'USD' ? '$' : (currency?.toUpperCase() ?? '')
+  return `${symbol}${amount}`
+}
+
+async function handlePaidLinkClick(link) {
+  if (paidLinkLoading.value === link.id) { return }
+  paidLinkLoading.value = link.id
+  try {
+    const res = await post(`/links/${link.id}/checkout`)
+    window.location.href = res.checkout_url
+  } catch {
+    paidLinkLoading.value = null
+  }
+}
+
 async function handleLinkClick(link) {
   if (link.is_password_protected) {
     passwordModal.value = { link, value: '', error: '', loading: false }
@@ -314,7 +343,26 @@ function applyProfileMeta(p) {
   }
 }
 
-onMounted(fetchProfile)
+async function handleStripeReturn() {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('paid') !== '1') { return }
+  const linkId = params.get('link')
+  const sessionId = params.get('session')
+  if (!linkId || !sessionId) { return }
+  // Clean URL without reloading
+  window.history.replaceState({}, '', window.location.pathname)
+  try {
+    const res = await get(`/links/${linkId}/reveal?session_id=${encodeURIComponent(sessionId)}`)
+    if (res.url) {
+      window.open(res.url, '_blank', 'noopener,noreferrer')
+    }
+  } catch {}
+}
+
+onMounted(async () => {
+  await fetchProfile()
+  await handleStripeReturn()
+})
 </script>
 
 <style scoped>
@@ -530,6 +578,21 @@ onMounted(fetchProfile)
 .link-arrow { color: #666; font-size: 1rem; transition: transform 0.15s; }
 .link-item:hover .link-arrow { transform: translateX(4px); color: #7c6af7; }
 .link-item.is-copy .link-arrow { font-size: 1.1rem; }
+
+.paid-link {
+  cursor: pointer;
+}
+
+.link-paid-badge {
+  background: linear-gradient(135deg, #7c6af7, #e96af5);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 .profile-actions { display: flex; gap: 10px; margin-bottom: 24px; }
 

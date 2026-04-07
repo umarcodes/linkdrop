@@ -12,11 +12,17 @@ class LinkController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $links = $request->user()
-            ->links()
-            ->orderByDesc('is_pinned')
-            ->orderBy('order')
-            ->get();
+        $query = $request->user()->links();
+
+        if ($request->filled('profile_id')) {
+            $profileId = (int) $request->query('profile_id');
+            // Verify the profile belongs to the user before filtering
+            $ownsProfile = $request->user()->profiles()->where('id', $profileId)->exists();
+            abort_unless($ownsProfile, 403);
+            $query->where('profile_id', $profileId);
+        }
+
+        $links = $query->orderByDesc('is_pinned')->orderBy('order')->get();
 
         return response()->json($links);
     }
@@ -45,6 +51,9 @@ class LinkController extends Controller
             'is_header' => ['boolean'],
             'password' => ['nullable', 'string', 'max:255'],
             'max_clicks' => ['nullable', 'integer', 'min:1'],
+            'price_cents' => ['nullable', 'integer', 'min:50'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'profile_id' => ['nullable', 'integer', 'exists:profiles,id'],
         ]);
 
         $user = $request->user();
@@ -53,10 +62,19 @@ class LinkController extends Controller
             return response()->json(['message' => "You have reached the link limit for the {$user->plan} plan. Upgrade to Pro for unlimited links."], 422);
         }
 
+        // Resolve profile_id: use provided (if owned) or fall back to default profile
+        $profileId = null;
+        if (! empty($validated['profile_id'])) {
+            $profileId = $user->profiles()->where('id', $validated['profile_id'])->value('id');
+            abort_unless($profileId, 403);
+        }
+        $profileId ??= $user->defaultProfile()->value('id');
+
         $order = ($user->links()->max('order') ?? 0) + 1;
 
         $link = $user->links()->create([
             ...$validated,
+            'profile_id' => $profileId,
             'order' => $order,
             'url' => $isUrlless ? null : ($validated['url'] ?? null),
             'is_active' => $validated['is_active'] ?? true,
@@ -96,6 +114,8 @@ class LinkController extends Controller
             'ends_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:starts_at'],
             'password' => ['sometimes', 'nullable', 'string', 'max:255'],
             'max_clicks' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'price_cents' => ['sometimes', 'nullable', 'integer', 'min:50'],
+            'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
         ]);
 
         $link->update($validated);

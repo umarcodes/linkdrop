@@ -9,7 +9,7 @@ class ProfileView extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['user_id', 'ip'];
+    protected $fillable = ['user_id', 'profile_id', 'ip'];
 
     public function user(): BelongsTo
     {
