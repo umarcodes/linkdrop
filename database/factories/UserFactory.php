@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -32,6 +33,20 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
+    }
+
+    /**
+     * Auto-create a default profile after the user is created.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            Profile::create([
+                'user_id' => $user->id,
+                'username' => $user->username,
+                'is_default' => true,
+            ]);
+        });
     }
 
     /**

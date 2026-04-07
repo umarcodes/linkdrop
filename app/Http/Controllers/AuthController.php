@@ -50,12 +50,21 @@ class AuthController extends Controller
             DB::table('waitlist')->where('invite_code', $validated['invite_code'])->delete();
         }
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'username' => $validated['username'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
+        $user = DB::transaction(function () use ($validated) {
+            $user = User::create([
+                'name' => $validated['name'],
+                'username' => $validated['username'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+            ]);
+
+            $user->profiles()->create([
+                'username' => $validated['username'],
+                'is_default' => true,
+            ]);
+
+            return $user;
+        });
 
         Auth::login($user);
         if ($request->hasSession()) {

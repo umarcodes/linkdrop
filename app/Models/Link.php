@@ -15,6 +15,7 @@ class Link extends Model
 
     protected $fillable = [
         'user_id',
+        'profile_id',
         'title',
         'url',
         'file_path',
@@ -30,15 +31,22 @@ class Link extends Model
         'ends_at',
         'password',
         'max_clicks',
+        'price_cents',
+        'currency',
     ];
 
     protected $hidden = ['password'];
 
-    protected $appends = ['is_password_protected'];
+    protected $appends = ['is_password_protected', 'is_paid'];
 
     public function getIsPasswordProtectedAttribute(): bool
     {
         return ! empty($this->attributes['password']);
+    }
+
+    public function getIsPaidAttribute(): bool
+    {
+        return ($this->attributes['price_cents'] ?? 0) > 0;
     }
 
     protected function password(): Attribute
@@ -58,6 +66,7 @@ class Link extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'max_clicks' => 'integer',
+            'price_cents' => 'integer',
             'utm_params' => 'array',
         ];
     }
@@ -67,8 +76,18 @@ class Link extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function profile(): BelongsTo
+    {
+        return $this->belongsTo(Profile::class);
+    }
+
     public function clicks(): HasMany
     {
         return $this->hasMany(LinkClick::class);
+    }
+
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(LinkPurchase::class);
     }
 }

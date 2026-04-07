@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Models\Profile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -16,22 +16,63 @@ class ProfileController extends Controller
     {
         $host = $request->query('host') ?: $request->getHost();
 
-        $user = User::where('custom_domain', $host)->first();
+        $profile = Profile::where('custom_domain', $host)->first();
 
-        if (! $user) {
+        if (! $profile) {
             return response()->json(['username' => null], 404);
         }
 
-        return response()->json(['username' => $user->username]);
+        return response()->json(['username' => $profile->username]);
     }
 
     public function show(Request $request, string $username): JsonResponse
     {
-        $user = User::where('username', $username)->firstOrFail();
+        $profile = Profile::with('user')->where('username', $username)->firstOrFail();
+        $user = $profile->user;
 
-        $user->profileViews()->create(['ip' => $request->ip()]);
+        $profile->profileViews()->create([
+            'user_id' => $user->id,
+            'ip' => $request->ip(),
+        ]);
 
-        $links = $user->links()
+        $profileViewWebhooks = $user->webhooks()->where('event', 'profile.viewed')->where('is_active', true)->get();
+
+        if ($profileViewWebhooks->isNotEmpty()) {
+            $profilePayload = json_encode([
+                'event' => 'profile.viewed',
+                'profile' => ['username' => $profile->username],
+                'ip' => $request->ip(),
+                'at' => now()->toISOString(),
+            ]);
+
+            foreach ($profileViewWebhooks as $webhook) {
+                $headers = ['Content-Type: application/json'];
+                if ($webhook->secret) {
+                    $headers[] = 'X-Webhook-Signature: '.hash_hmac('sha256', $profilePayload, $webhook->secret);
+                }
+                $ch = curl_init($webhook->url);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $profilePayload);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($ch);
+                curl_close($ch);
+
+                if ($response === false || $httpCode >= 400) {
+                    Log::warning('Webhook delivery failed', [
+                        'webhook_id' => $webhook->id,
+                        'url' => $webhook->url,
+                        'http_code' => $httpCode,
+                        'curl_error' => $curlError ?: null,
+                    ]);
+                }
+            }
+        }
+
+        $links = $profile->links()
             ->where(function ($q) {
                 $q->where('is_header', true)
                     ->orWhereIn('type', ['tip_jar', 'file'])
@@ -45,25 +86,25 @@ class ProfileController extends Controller
             })
             ->orderByDesc('is_pinned')
             ->orderBy('order')
-            ->get(['id', 'title', 'url', 'file_path', 'icon', 'og_image', 'utm_params', 'type', 'is_header', 'password']);
+            ->get(['id', 'title', 'url', 'file_path', 'icon', 'og_image', 'utm_params', 'type', 'is_header', 'password', 'price_cents', 'currency']);
 
         return response()->json([
             'name' => $user->name,
-            'username' => $user->username,
-            'bio' => $user->bio,
-            'avatar' => $user->avatar,
-            'theme' => $user->theme,
-            'badge_available_for_hire' => $user->badge_available_for_hire,
-            'badge_verified' => $user->badge_verified,
+            'username' => $profile->username,
+            'bio' => $profile->bio,
+            'avatar' => $profile->avatar,
+            'theme' => $profile->theme,
+            'badge_available_for_hire' => $profile->badge_available_for_hire,
+            'badge_verified' => $profile->badge_verified,
             'links' => $links,
         ]);
     }
 
     public function verifyLinkPassword(Request $request, string $username, int $linkId): JsonResponse
     {
-        $user = User::where('username', $username)->firstOrFail();
+        $profile = Profile::where('username', $username)->firstOrFail();
 
-        $link = $user->links()->where('id', $linkId)->where('is_active', true)->where('is_header', false)->firstOrFail();
+        $link = $profile->links()->where('id', $linkId)->where('is_active', true)->where('is_header', false)->firstOrFail();
 
         if (empty($link->getRawOriginal('password'))) {
             return response()->json(['url' => $link->url]);
@@ -80,9 +121,9 @@ class ProfileController extends Controller
 
     public function trackClick(Request $request, string $username, int $linkId): JsonResponse
     {
-        $user = User::where('username', $username)->firstOrFail();
+        $profile = Profile::where('username', $username)->firstOrFail();
 
-        $link = $user->links()->where('id', $linkId)->where('is_active', true)->where('is_header', false)->firstOrFail();
+        $link = $profile->links()->where('id', $linkId)->where('is_active', true)->where('is_header', false)->firstOrFail();
 
         $referrer = $request->header('Referer');
         if ($referrer) {
@@ -114,7 +155,6 @@ class ProfileController extends Controller
         $ip = $request->ip();
         $country = null;
 
-        // Only geolocate public, routable IPs; cache results by IP to avoid repeated external calls
         if ($ip && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
             $country = Cache::remember("geo:{$ip}", now()->addDay(), function () use ($ip) {
                 $ch = curl_init("http://ip-api.com/json/{$ip}?fields=countryCode");
@@ -158,6 +198,7 @@ class ProfileController extends Controller
             return response()->json(['message' => 'Click limit reached'], 422);
         }
 
+        $user = $profile->user;
         $webhooks = $user->webhooks()->where('event', 'link.clicked')->where('is_active', true)->get();
 
         $payload = json_encode([

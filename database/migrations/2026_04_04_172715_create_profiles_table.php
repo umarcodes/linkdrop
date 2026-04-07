@@ -11,15 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Migration reserved for future multiple-profiles feature
-        // Schema::create('profiles', function (Blueprint $table) { ... });
+        Schema::create('profiles', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('username', 32)->unique();
+            $table->text('bio')->nullable();
+            $table->string('avatar')->nullable();
+            $table->json('theme')->nullable();
+            $table->string('custom_domain', 255)->nullable()->unique();
+            $table->boolean('badge_available_for_hire')->default(false);
+            $table->boolean('badge_verified')->default(false);
+            $table->boolean('is_default')->default(false);
+            $table->timestamps();
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        // no-op
+        Schema::dropIfExists('profiles');
     }
 };

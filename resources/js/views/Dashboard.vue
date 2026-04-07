@@ -71,7 +71,13 @@
       <!-- Links Tab -->
       <div v-if="activeTab === 'links'" class="panel">
         <div class="panel-header">
-          <h2>My Links <span class="link-limit-badge">{{ links.length }}/{{ user?.plan === 'pro' || user?.is_admin ? '∞' : 10 }}</span></h2>
+          <h2>
+            My Links
+            <span class="link-limit-badge">{{ links.length }}/{{ user?.plan === 'pro' || user?.is_admin ? '∞' : 10 }}</span>
+            <select v-if="profiles.length > 1" class="profile-select" :value="activeProfileId" @change="switchProfile(Number($event.target.value))">
+              <option v-for="p in profiles" :key="p.id" :value="p.id">@{{ p.username }}</option>
+            </select>
+          </h2>
           <div style="display:flex;gap:8px">
             <button class="btn-add" @click="addingHeader = !addingHeader; showAddForm = false; showTipJarForm = false">
               {{ addingHeader ? '✕ Cancel' : '+ Section' }}
@@ -158,6 +164,17 @@
             <div v-if="newLink.og_image" class="og-preview">
               <img :src="newLink.og_image" class="og-preview-img" alt="Preview" />
               <button type="button" class="og-remove" @click="newLink.og_image = ''">✕</button>
+            </div>
+            <div class="field">
+              <label>Price <span class="field-hint">(optional — leave blank for free)</span></label>
+              <div class="price-row">
+                <input v-model.number="newLink.price_cents" type="number" min="50" placeholder="e.g. 499 = $4.99" class="price-input" />
+                <select v-model="newLink.currency" class="currency-select">
+                  <option value="usd">USD</option>
+                  <option value="eur">EUR</option>
+                  <option value="gbp">GBP</option>
+                </select>
+              </div>
             </div>
             <div v-if="addError" class="error-box">{{ addError }}</div>
             <button type="submit" :disabled="addLoading" class="btn-primary">
@@ -445,6 +462,46 @@
         <div class="panel-header">
           <h2>Profile</h2>
         </div>
+
+        <!-- Profile switcher -->
+        <div class="profiles-section">
+          <div class="profiles-list">
+            <button
+              v-for="p in profiles"
+              :key="p.id"
+              :class="['profile-pill', p.id === activeProfileId && 'active']"
+              type="button"
+              @click="switchProfile(p.id)"
+            >
+              @{{ p.username }}
+              <span v-if="p.is_default" class="default-badge">default</span>
+            </button>
+            <button type="button" class="profile-pill profile-pill-add" @click="showNewProfileForm = !showNewProfileForm">
+              {{ showNewProfileForm ? '✕' : '+ New' }}
+            </button>
+          </div>
+          <div v-if="showNewProfileForm" class="new-profile-form">
+            <input v-model="newProfileUsername" placeholder="username" class="edit-url-input" @keydown.enter.prevent="createProfile" />
+            <button type="button" class="btn-add" @click="createProfile">Create</button>
+            <div v-if="newProfileError" class="error-box" style="margin-top:6px">{{ newProfileError }}</div>
+          </div>
+          <div v-if="profiles.length > 1 && activeProfile" class="profile-actions-row">
+            <button
+              v-if="!activeProfile.is_default"
+              type="button"
+              class="btn-add"
+              style="font-size:0.78rem"
+              @click="setDefaultProfile(activeProfile)"
+            >Set as default</button>
+            <button
+              v-if="!activeProfile.is_default"
+              type="button"
+              class="btn-delete-profile"
+              @click="deleteProfile(activeProfile)"
+            >Delete profile</button>
+          </div>
+        </div>
+
         <form class="profile-form" @submit.prevent="saveProfile">
           <div class="field">
             <label>Name</label>
@@ -615,13 +672,13 @@
     <!-- Phone Preview -->
     <aside class="preview-panel">
       <div class="preview-title">Live Preview</div>
-      <a :href="`/${user?.username}`" target="_blank" class="phone-link" title="Open your public profile">
+      <a :href="`/${activeProfile?.username ?? user?.username}`" target="_blank" class="phone-link" title="Open your public profile">
         <div class="phone">
           <div class="phone-screen">
-            <img v-if="user?.avatar" :src="user.avatar" class="preview-avatar preview-avatar-img" alt="" />
+            <img v-if="activeProfile?.avatar ?? user?.avatar" :src="activeProfile?.avatar ?? user?.avatar" class="preview-avatar preview-avatar-img" alt="" />
             <div v-else class="preview-avatar">{{ userInitial }}</div>
             <div class="preview-name">{{ user?.name }}</div>
-            <div class="preview-handle">@{{ user?.username }}</div>
+            <div class="preview-handle">@{{ activeProfile?.username ?? user?.username }}</div>
             <div class="preview-links">
               <div v-for="link in activeLinks" :key="link.id" class="preview-link">
                 <span>{{ link.icon || '🔗' }}</span>
@@ -669,6 +726,7 @@ const { get: getWebhooks, post: postWebhook, del: delWebhook } = useApi()
 const { get: getAdminStats, patch: patchAdmin, del: delAdmin } = useApi()
 const { put: putEdit, loading: editLoading } = useApi()
 const { patch: patchProfile, loading: profileLoading } = useApi()
+const { get: getProfiles, post: postProfile, patch: patchProfileData, del: delProfile } = useApi()
 const toast = useToast()
 
 const activeTab    = ref('links')
@@ -712,12 +770,18 @@ const themePresets = [
   { name: 'Slate', accent: '#94a3b8', card: '#0f172a', text: '#e2e8f0' },
 ]
 const profileError = ref('')
+const profiles = ref([])
+const activeProfileId = ref(null)
+const activeProfile = computed(() => profiles.value.find(p => p.id === activeProfileId.value) || profiles.value.find(p => p.is_default) || null)
+const showNewProfileForm = ref(false)
+const newProfileUsername = ref('')
+const newProfileError = ref('')
 const showDeleteConfirm = ref(false)
 const deletePassword = ref('')
 const deleteError = ref('')
 const { del: delAccount, loading: deleteLoading } = useApi()
 
-const newLink = ref({ title: '', url: '', icon: '', og_image: '' })
+const newLink = ref({ title: '', url: '', icon: '', og_image: '', price_cents: null, currency: 'usd' })
 const ogFetching = ref(false)
 
 const userInitial = computed(() => user.value?.name?.[0]?.toUpperCase() || '?')
@@ -844,7 +908,8 @@ async function fetchOgForEdit() {
 }
 
 async function fetchLinks() {
-  links.value = await getLinks('/links')
+  const id = activeProfileId.value
+  links.value = await getLinks(id ? `/links?profile_id=${id}` : '/links')
 }
 
 async function fetchAnalytics() {
@@ -852,9 +917,9 @@ async function fetchAnalytics() {
 }
 
 async function downloadCsv() {
-  const token = localStorage.getItem('linkdrop_token')
   const res = await fetch('/api/analytics/export', {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'text/csv' },
+    credentials: 'include',
+    headers: { Accept: 'text/csv' },
   })
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
@@ -870,7 +935,7 @@ async function handleAddLink() {
   try {
     const link = await post('/links', newLink.value)
     links.value.push(link)
-    newLink.value = { title: '', url: '', icon: '', og_image: '' }
+    newLink.value = { title: '', url: '', icon: '', og_image: '', price_cents: null, currency: 'usd' }
     showAddForm.value = false
     toast.success('Link added')
   } catch (e) {
@@ -1058,13 +1123,82 @@ async function handleDeleteAccount() {
 
 async function saveProfile() {
   profileError.value = ''
+  const profileId = activeProfile.value?.id
+  if (!profileId) { profileError.value = 'No active profile selected.'; return }
   try {
-    const updated = await patchProfile('/profile', profileForm.value)
-    user.value = { ...user.value, ...updated }
-    localStorage.setItem('linkdrop_user', JSON.stringify(user.value))
+    const updated = await patchProfile(`/profiles/${profileId}`, profileForm.value)
+    const idx = profiles.value.findIndex(p => p.id === profileId)
+    if (idx !== -1) { profiles.value[idx] = updated }
     toast.success('Profile saved')
   } catch (e) {
     profileError.value = typeof e === 'string' ? e : 'Failed to save profile'
+  }
+}
+
+async function fetchProfiles() {
+  profiles.value = await getProfiles('/profiles')
+  if (!activeProfileId.value && profiles.value.length) {
+    const def = profiles.value.find(p => p.is_default)
+    activeProfileId.value = def?.id ?? profiles.value[0].id
+  }
+  syncProfileForm()
+}
+
+function syncProfileForm() {
+  const p = activeProfile.value
+  if (!p) { return }
+  profileForm.value = {
+    name: user.value?.name || '',
+    bio: p.bio || '',
+    theme: p.theme || {},
+    badge_available_for_hire: p.badge_available_for_hire || false,
+    custom_domain: p.custom_domain || '',
+  }
+}
+
+async function switchProfile(id) {
+  activeProfileId.value = id
+  syncProfileForm()
+  await fetchLinks()
+}
+
+async function createProfile() {
+  newProfileError.value = ''
+  try {
+    const profile = await postProfile('/profiles', { username: newProfileUsername.value })
+    profiles.value.push(profile)
+    newProfileUsername.value = ''
+    showNewProfileForm.value = false
+    toast.success('Profile created')
+  } catch (e) {
+    newProfileError.value = typeof e === 'string' ? e : 'Username already taken or invalid.'
+  }
+}
+
+async function setDefaultProfile(profile) {
+  try {
+    const updated = await postProfile(`/profiles/${profile.id}/set-default`, {})
+    profiles.value = profiles.value.map(p => ({ ...p, is_default: p.id === updated.id }))
+    toast.success(`@${profile.username} is now your default profile`)
+  } catch {
+    toast.error('Failed to update default profile')
+  }
+}
+
+async function deleteProfile(profile) {
+  if (!confirm(`Delete profile @${profile.username}? Its links will also be deleted.`)) { return }
+  try {
+    await delProfile(`/profiles/${profile.id}`)
+    profiles.value = profiles.value.filter(p => p.id !== profile.id)
+    if (activeProfileId.value === profile.id) {
+      const def = profiles.value.find(p => p.is_default) || profiles.value[0]
+      activeProfileId.value = def?.id ?? null
+      syncProfileForm()
+      await fetchLinks()
+    }
+    toast.success('Profile deleted')
+  } catch (e) {
+    toast.error(typeof e === 'string' ? e : 'Failed to delete profile')
   }
 }
 
@@ -1166,11 +1300,11 @@ async function sendVerificationEmail() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchProfiles()
   fetchLinks()
   fetchAnalytics()
   fetchWebhooks()
-  profileForm.value = { name: user.value?.name || '', bio: user.value?.bio || '', theme: user.value?.theme || {}, badge_available_for_hire: user.value?.badge_available_for_hire || false, custom_domain: user.value?.custom_domain || '' }
 })
 </script>
 
@@ -1884,4 +2018,62 @@ input:focus { border-color: #7c6af7; }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* Profiles */
+.profiles-section { margin-bottom: 24px; }
+.profiles-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.profile-pill {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid #2a2a3a;
+  background: transparent;
+  color: #a0a0b0;
+  font-family: inherit;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.profile-pill:hover { border-color: #7c6af7; color: #e8e8f0; }
+.profile-pill.active { border-color: #7c6af7; background: rgba(124,106,247,0.12); color: #e8e8f0; }
+.profile-pill-add { border-style: dashed; }
+.default-badge { font-size: 0.65rem; background: rgba(124,106,247,0.2); color: #7c6af7; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
+.new-profile-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.profile-actions-row { display: flex; gap: 8px; margin-top: 6px; }
+.btn-delete-profile {
+  font-size: 0.78rem;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(248,113,113,0.3);
+  background: transparent;
+  color: #f87171;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-delete-profile:hover { background: rgba(248,113,113,0.1); }
+
+.profile-select {
+  margin-left: 10px;
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid #2a2a3a;
+  background: #0d0d15;
+  color: #a0a0b0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.price-row { display: flex; gap: 8px; }
+.price-input { flex: 1; }
+.currency-select {
+  width: 70px;
+  padding: 10px 8px;
+  background: #0d0d15;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  color: #e8e8f0;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
 </style>
