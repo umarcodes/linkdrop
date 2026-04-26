@@ -20,13 +20,6 @@ class User extends Authenticatable
         'password',
         'bio',
         'avatar',
-        'theme',
-        'api_key',
-        'custom_domain',
-        'badge_available_for_hire',
-        'badge_verified',
-        'is_admin',
-        'plan',
     ];
 
     protected $hidden = [
@@ -39,21 +32,12 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'theme' => 'array',
-            'badge_available_for_hire' => 'boolean',
-            'badge_verified' => 'boolean',
-            'is_admin' => 'boolean',
         ];
     }
 
-    public function profiles(): HasMany
+    public function profile(): HasOne
     {
-        return $this->hasMany(Profile::class);
-    }
-
-    public function defaultProfile(): HasOne
-    {
-        return $this->hasOne(Profile::class)->where('is_default', true);
+        return $this->hasOne(Profile::class);
     }
 
     public function links(): HasMany
@@ -64,22 +48,5 @@ class User extends Authenticatable
     public function profileViews(): HasMany
     {
         return $this->hasMany(ProfileView::class);
-    }
-
-    public function webhooks(): HasMany
-    {
-        return $this->hasMany(Webhook::class);
-    }
-
-    public function isPro(): bool
-    {
-        return in_array($this->plan, ['pro', 'admin'], true) || $this->is_admin;
-    }
-
-    public function maxLinks(): int
-    {
-        return $this->isPro()
-            ? config('linkdrop.pro_tier_link_limit')
-            : config('linkdrop.free_tier_link_limit');
     }
 }

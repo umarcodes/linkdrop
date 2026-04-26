@@ -3,26 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Link;
-use App\Rules\NoPrivateUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class LinkController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = $request->user()->links();
-
-        if ($request->filled('profile_id')) {
-            $profileId = (int) $request->query('profile_id');
-            // Verify the profile belongs to the user before filtering
-            $ownsProfile = $request->user()->profiles()->where('id', $profileId)->exists();
-            abort_unless($ownsProfile, 403);
-            $query->where('profile_id', $profileId);
-        }
-
-        $links = $query->orderByDesc('is_pinned')->orderBy('order')->get();
+        $links = $request->user()->links()->orderBy('order')->get();
 
         return response()->json($links);
     }
@@ -32,54 +20,26 @@ class LinkController extends Controller
         $request->merge(['url' => $this->normalizeUrl($request->input('url', ''))]);
 
         $isHeader = (bool) $request->input('is_header', false);
-        $type = $request->input('type', 'link');
-        $isUrlless = $isHeader || in_array($type, ['tip_jar', 'file'], true);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'url' => $isUrlless ? ['nullable', 'string'] : ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
+            'url' => $isHeader ? ['nullable', 'string'] : ['required', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
-            'type' => ['nullable', 'string', 'in:link,tip_jar,file'],
-            'og_image' => ['nullable', 'url', 'max:500'],
-            'utm_params' => ['nullable', 'array'],
-            'utm_params.source' => ['nullable', 'string', 'max:100'],
-            'utm_params.medium' => ['nullable', 'string', 'max:100'],
-            'utm_params.campaign' => ['nullable', 'string', 'max:100'],
-            'utm_params.term' => ['nullable', 'string', 'max:100'],
-            'utm_params.content' => ['nullable', 'string', 'max:100'],
             'is_active' => ['boolean'],
             'is_header' => ['boolean'],
-            'password' => ['nullable', 'string', 'max:255'],
-            'max_clicks' => ['nullable', 'integer', 'min:1'],
-            'price_cents' => ['nullable', 'integer', 'min:50'],
-            'currency' => ['nullable', 'string', 'size:3'],
-            'profile_id' => ['nullable', 'integer', 'exists:profiles,id'],
         ]);
 
         $user = $request->user();
-        $currentCount = $user->links()->count();
-        if ($currentCount >= $user->maxLinks()) {
-            return response()->json(['message' => "You have reached the link limit for the {$user->plan} plan. Upgrade to Pro for unlimited links."], 422);
-        }
-
-        // Resolve profile_id: use provided (if owned) or fall back to default profile
-        $profileId = null;
-        if (! empty($validated['profile_id'])) {
-            $profileId = $user->profiles()->where('id', $validated['profile_id'])->value('id');
-            abort_unless($profileId, 403);
-        }
-        $profileId ??= $user->defaultProfile()->value('id');
-
+        $profileId = $user->profile()->value('id');
         $order = ($user->links()->max('order') ?? 0) + 1;
 
         $link = $user->links()->create([
             ...$validated,
             'profile_id' => $profileId,
             'order' => $order,
-            'url' => $isUrlless ? null : ($validated['url'] ?? null),
+            'url' => $isHeader ? null : ($validated['url'] ?? null),
             'is_active' => $validated['is_active'] ?? true,
             'is_header' => $isHeader,
-            'type' => $type,
         ]);
 
         return response()->json($link, 201);
@@ -99,23 +59,8 @@ class LinkController extends Controller
             'title' => ['sometimes', 'string', 'max:255'],
             'url' => $link->is_header ? ['nullable', 'string'] : ['sometimes', 'url', 'max:2048', 'regex:#^https?://#i'],
             'icon' => ['nullable', 'string', 'max:10'],
-            'og_image' => ['sometimes', 'nullable', 'url', 'max:500'],
-            'utm_params' => ['sometimes', 'nullable', 'array'],
-            'utm_params.source' => ['nullable', 'string', 'max:100'],
-            'utm_params.medium' => ['nullable', 'string', 'max:100'],
-            'utm_params.campaign' => ['nullable', 'string', 'max:100'],
-            'utm_params.term' => ['nullable', 'string', 'max:100'],
-            'utm_params.content' => ['nullable', 'string', 'max:100'],
-            'type' => ['sometimes', 'nullable', 'string', 'in:link,tip_jar,file'],
             'is_active' => ['sometimes', 'boolean'],
-            'is_pinned' => ['sometimes', 'boolean'],
             'is_header' => ['sometimes', 'boolean'],
-            'starts_at' => ['sometimes', 'nullable', 'date'],
-            'ends_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:starts_at'],
-            'password' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'max_clicks' => ['sometimes', 'nullable', 'integer', 'min:1'],
-            'price_cents' => ['sometimes', 'nullable', 'integer', 'min:50'],
-            'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
         ]);
 
         $link->update($validated);
@@ -141,67 +86,6 @@ class LinkController extends Controller
         }
 
         return $url;
-    }
-
-    public function uploadFile(Request $request, Link $link): JsonResponse
-    {
-        if ($request->user()->id !== $link->user_id) {
-            abort(403);
-        }
-
-        $request->validate([
-            'file' => ['required', 'file', 'max:'.config('linkdrop.max_file_upload_kb'), 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,png,jpg,jpeg,gif,webp,mp3,mp4,mov'],
-        ]);
-
-        // Delete old file
-        if ($link->file_path) {
-            $oldPath = str_replace('/storage/', '', parse_url($link->file_path, PHP_URL_PATH));
-            Storage::disk('public')->delete($oldPath);
-        }
-
-        $path = $request->file('file')->store("link-files/{$request->user()->id}", 'public');
-        $url = Storage::disk('public')->url($path);
-
-        $link->update(['file_path' => $url, 'type' => 'file', 'url' => null]);
-
-        return response()->json(['file_path' => $url]);
-    }
-
-    public function fetchOg(Request $request): JsonResponse
-    {
-        $request->validate(['url' => ['required', 'url', 'max:2048', new NoPrivateUrl]]);
-
-        $url = $request->input('url');
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; LinkDrop/1.0)');
-        $html = curl_exec($ch);
-        curl_close($ch);
-
-        $ogImage = null;
-        $ogTitle = null;
-
-        if ($html) {
-            if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\'][^>]*>/i', $html, $m)) {
-                $ogImage = $m[1];
-            } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\'][^>]*>/i', $html, $m)) {
-                $ogImage = $m[1];
-            }
-
-            if (preg_match('/<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\'][^>]*>/i', $html, $m)) {
-                $ogTitle = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            } elseif (preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:title["\'][^>]*>/i', $html, $m)) {
-                $ogTitle = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            } elseif (preg_match('/<title[^>]*>([^<]+)<\/title>/i', $html, $m)) {
-                $ogTitle = html_entity_decode(trim($m[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            }
-        }
-
-        return response()->json(['og_image' => $ogImage, 'og_title' => $ogTitle]);
     }
 
     public function reorder(Request $request): JsonResponse

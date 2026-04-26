@@ -24,31 +24,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'Registration is currently closed.'], 403);
         }
 
-        $rules = [
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:32', 'alpha_dash', 'unique:users,username', new NotReservedUsername],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ];
-
-        if ($mode === 'invite') {
-            $rules['invite_code'] = ['required', 'string'];
-        }
-
-        $validated = $request->validate($rules);
-
-        if ($mode === 'invite') {
-            $entry = DB::table('waitlist')
-                ->where('invite_code', $validated['invite_code'])
-                ->where('invited', true)
-                ->first();
-
-            if (! $entry) {
-                return response()->json(['message' => 'Invalid or expired invite code.'], 422);
-            }
-
-            DB::table('waitlist')->where('invite_code', $validated['invite_code'])->delete();
-        }
+        ]);
 
         $user = DB::transaction(function () use ($validated) {
             $user = User::create([
@@ -58,7 +39,7 @@ class AuthController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
-            $user->profiles()->create([
+            $user->profile()->create([
                 'username' => $validated['username'],
                 'is_default' => true,
             ]);
@@ -157,13 +138,6 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'bio' => ['nullable', 'string', 'max:500'],
-            'theme' => ['nullable', 'array'],
-            'theme.accent' => ['nullable', 'string', 'max:20'],
-            'theme.bg' => ['nullable', 'string', 'max:20'],
-            'theme.card' => ['nullable', 'string', 'max:20'],
-            'theme.text' => ['nullable', 'string', 'max:20'],
-            'badge_available_for_hire' => ['sometimes', 'boolean'],
-            'custom_domain' => ['sometimes', 'nullable', 'string', 'max:255', 'unique:users,custom_domain,'.$user->id],
         ]);
 
         $user->update($validated);
