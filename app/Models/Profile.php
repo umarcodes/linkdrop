@@ -16,19 +16,12 @@ class Profile extends Model
         'username',
         'bio',
         'avatar',
-        'theme',
-        'custom_domain',
-        'badge_available_for_hire',
-        'badge_verified',
         'is_default',
     ];
 
     protected function casts(): array
     {
         return [
-            'theme' => 'array',
-            'badge_available_for_hire' => 'boolean',
-            'badge_verified' => 'boolean',
             'is_default' => 'boolean',
         ];
     }
